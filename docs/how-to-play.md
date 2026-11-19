@@ -51,7 +51,7 @@ The game asks **where you keep watch**: type a town or city and pick it from the
 | **W** | The whole world, closest to going out first |
 | **L** | Light a new fire |
 | **N** | The watch log |
-| **Y** | You: your name, embers and record (**N** there to choose your name) |
+| **Y** | You: your name, embers and record (**N** there to choose your name, **U** for miles or kilometres) |
 | **O** | Who's online at the door; pick someone and **P** to page them a line |
 | **P** | Change where you keep watch |
 | **S** | Servers (the Beacon servers your fires come from) |

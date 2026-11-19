@@ -57,6 +57,8 @@ Losing the host key gives every returning player a "host key changed" warning, s
 
 **Files instead of Postgres:** set `COMPOSE_FILE=compose.yaml:compose.files.yaml` in `.env`. Then `db` doesn't run, no password is needed, and data goes in the `door-data` volume at `/data`. To move a files door into Postgres: `docker compose run --rm -v watchfire_door-data:/old door node door.mjs import /old`, then `docker compose restart door`.
 
+**A Postgres elsewhere:** set `COMPOSE_FILE=compose.yaml:compose.external-db.yaml` and `WATCHFIRE_DOOR_DATABASE_URL=postgres://watchfire@<host>:5432/watchfire` in `.env`, with `WATCHFIRE_DB_PASSWORD` as that database's password. No local `db` runs. Without Compose, give the image `WATCHFIRE_DOOR_DATABASE_URL` (password in the URL, or `PGPASSWORD`) and `WATCHFIRE_DOOR_MASTER_KEY`.
+
 Run one door per database: the one-session-per-keeper check lives in the door's memory.
 
 ## Website only

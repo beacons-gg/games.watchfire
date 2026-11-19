@@ -39,7 +39,8 @@ services:
       # So the website's join command names the port players dial, not the container's.
       WATCHFIRE_DOOR_PUBLIC_PORT: ${WATCHFIRE_DOOR_PUBLIC_PORT:-2222}
       # Everything the door keeps (host key, keepers, motd, bans, watch log), but the master key.
-      WATCHFIRE_DOOR_DATABASE_URL: postgres://watchfire@db:5432/watchfire
+      # The db service below, unless .env names another Postgres (see compose.external-db.yaml).
+      WATCHFIRE_DOOR_DATABASE_URL: ${WATCHFIRE_DOOR_DATABASE_URL:-postgres://watchfire@db:5432/watchfire}
       WATCHFIRE_DOOR_DATABASE_PASSWORD_FILE: /run/secrets/db_password
     secrets: [master_key, db_password]
     depends_on:

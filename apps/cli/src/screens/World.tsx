@@ -80,7 +80,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
               {cell(safeText(f.name), nameW)} {cell(near, nearW)} {cell(stale ? "not answering" : game.serverNameOf(f.id), serverW)} <BurnBar secondsLeft={f.secondsLeft} ash={ash} width={8} />{" "}
               <TimeLeft secondsLeft={f.secondsLeft} ash={ash} stale={stale} pad={7} />{" "}
               {cell(`${f.logs}/${FIRE_TUNING.capacity}`, 6)}
-              {watch ? formatDistance(distanceKm(watch, f.location)) : ""}
+              {watch ? formatDistance(distanceKm(watch, f.location), game.units) : ""}
             </Text>
           );
         })}

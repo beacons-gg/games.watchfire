@@ -1,0 +1,14 @@
+# Use a Postgres that runs elsewhere instead of the db service: no local database starts. In .env:
+#
+#   COMPOSE_FILE=compose.yaml:compose.external-db.yaml
+#   WATCHFIRE_DOOR_DATABASE_URL=postgres://watchfire@db.example.internal:5432/watchfire
+#   WATCHFIRE_DB_PASSWORD=<that database's password>
+#
+# See docs/deploy.md.
+services:
+  door:
+    depends_on: !reset {}
+
+  db:
+    # Only with --profile postgres: not started.
+    profiles: [postgres]

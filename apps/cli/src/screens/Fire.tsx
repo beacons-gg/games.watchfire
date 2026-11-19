@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { serverHost } from "@beaconsgg/client-sdk";
-import { accessLabel, ago, clock, lastSeenText, serverLabel, distanceKm, FIRE_TUNING, formatDistance, formatDuration, safeText } from "@watchfire/core";
+import { accessLabel, ago, clock, lastSeenText, serverLabel, distanceKm, FIRE_TUNING, formatDistance, formatDuration, safeText, type Units } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { strengthFor } from "@watchfire/core/flame";
@@ -87,7 +87,7 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
     >
       <Text color="#a8a29e" wrap="truncate-end">
         {place ? `near ${place}` : " "}
-        {watch ? ` · ${awayFrom(distanceKm(watch, f.location))}` : ""}
+        {watch ? ` · ${awayFrom(distanceKm(watch, f.location), game.units)}` : ""}
       </Text>
       {seen !== null ? (
         <Text color="#fde68a" wrap="truncate-end">
@@ -144,4 +144,4 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
   );
 }
 
-const awayFrom = (km: number) => (km < 1 ? "right where you keep watch" : `${formatDistance(km)} from you`);
+const awayFrom = (km: number, units: Units) => (km < 1 ? "right where you keep watch" : `${formatDistance(km, units)} from you`);

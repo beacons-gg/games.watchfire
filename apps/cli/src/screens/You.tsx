@@ -36,6 +36,7 @@ export function You(props: { game: Game; session: Session; back(): void }) {
       if (key.escape || k === "q") return props.back();
       if (k === "n" && !game.isGuest && !game.busy) setNaming(true);
       if (k === "k" && revealPhrase) setHome("ask");
+      if (k === "u") void game.setUnits(game.units === "km" ? "mi" : "km");
     },
     { isActive: !naming },
   );
@@ -90,6 +91,7 @@ export function You(props: { game: Game; session: Session; back(): void }) {
             keys={[
               ["N", "ame", game.isGuest],
               ...(revealPhrase ? [["K", "eeper home"] as [string, string]] : []),
+              ["U", `nits: ${game.units === "km" ? "km" : "miles"}`],
               ["Esc", " back"],
             ]}
           />

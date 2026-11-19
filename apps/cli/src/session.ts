@@ -1,5 +1,5 @@
 import type { Wallet } from "@beaconsgg/identity";
-import type { DailyLogs, FireView, SavedServer, Snapshot } from "@watchfire/core";
+import type { DailyLogs, FireView, SavedServer, Snapshot, Units } from "@watchfire/core";
 import type { ScreenName } from "./app.tsx";
 
 /**
@@ -102,6 +102,8 @@ export interface KeeperState extends DailyLogs {
   servers?: SavedServer[];
   /** Set once the player has seen where their key lives. */
   toldKeyHint?: boolean;
+  /** Distances in kilometres (the default) or miles. */
+  units?: Units;
 }
 
 export interface KeeperStore {

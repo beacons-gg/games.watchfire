@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  formatDistance,
   distanceKm,
   firePolicy,
   FIRE_TUNING,
@@ -341,4 +342,11 @@ test("PlaceBook: each fire's nearest city, once; forgotten when the fire is", as
   assert.equal(await book.label([edinburgh]), false, "already labelled");
   await book.label([]);
   assert.equal(book.near("e@x"), null);
+});
+
+test("formatDistance: kilometres or miles, and 'here' under a kilometre either way", () => {
+  assert.equal(formatDistance(7148.4), "7,148 km");
+  assert.equal(formatDistance(7148.4, "mi"), "4,442 mi");
+  assert.equal(formatDistance(1.7, "mi"), "1 mi");
+  assert.equal(formatDistance(0.4, "mi"), "here");
 });

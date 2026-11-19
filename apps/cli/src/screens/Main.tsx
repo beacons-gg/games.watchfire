@@ -128,7 +128,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
               {game.multiServer ? <Text color="#78716c">{cell(game.serverNameOf(f.id), serverW)} </Text> : null}
               <Text color="#a8a29e">
                 {f.logs}/{FIRE_TUNING.capacity} logs · {seen !== null ? `last seen ${ago(seen)}` : `${f.keepers.length} kept`}
-                {km === null ? "" : ` · ${formatDistance(km)}`}
+                {km === null ? "" : ` · ${formatDistance(km, game.units)}`}
               </Text>
             </Text>
           );

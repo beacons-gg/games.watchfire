@@ -14,8 +14,13 @@ export function jitter(p: LatLng, meters: number, rand = Math.random): LatLng {
 
 const round = (n: number) => Math.round(n * 1e5) / 1e5;
 
-/** "4 km", "1,250 km", "here". */
-export function formatDistance(km: number): string {
+/** How a keeper likes distances shown. */
+export type Units = "km" | "mi";
+
+const KM_PER_MILE = 1.609344;
+
+/** "4 km", "1,250 mi", "here" (under a kilometre, either way). */
+export function formatDistance(km: number, units: Units = "km"): string {
   if (km < 1) return "here";
-  return `${Math.round(km).toLocaleString("en-US")} km`;
+  return `${Math.round(units === "mi" ? km / KM_PER_MILE : km).toLocaleString("en-US")} ${units}`;
 }
