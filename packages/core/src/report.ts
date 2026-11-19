@@ -8,9 +8,9 @@ export type WorldLook = Omit<WorldReport, "join" | "online">;
 export interface WorldReport {
   /** When the door last looked at the world (epoch seconds). Not the time it answered: that's the Date header. */
   at: number;
-  /** How to come in: `ssh -p 2222 <host>`. */
-  join: string;
-  /** Callers on the door right now, or null when the door doesn't say. */
+  /** How to come in: `ssh -p 2222 <host>`. Null when this site has no door to point to. */
+  join: string | null;
+  /** Callers on the door right now, or null when there's no door here (the site runs alone). */
   online: number | null;
   /** Burning fires first, the closest to going out first; then the dark ones, newest first. */
   fires: ReportFire[];

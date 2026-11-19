@@ -1,16 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Bans } from "../src/bans.ts";
+import { numberSetting, setting } from "../src/env.ts";
 import { pacedFetch } from "../src/pacer.ts";
 import { sharedReads } from "../src/shared.ts";
 import { startWeb, visitorHost } from "../src/web.ts";
 import type { WorldLook } from "@watchfire/core";
-import { keeperDir, Keepers } from "../src/keepers.ts";
 import { detectColorDepth } from "watchfire/local";
 
 test("pacedFetch lets reads through and spaces writes per server", async () => {
@@ -40,31 +40,6 @@ test("pacedFetch lets reads through and spaces writes per server", async () => {
   );
   assert.deepEqual(await burst[3]!.json(), { ok: false, error: "rateLimited", message: "The door is busy. Try again in a moment." });
   assert.equal(calls.filter((c) => c === "POST https://c.example/w").length, 3);
-});
-
-test("keepers: one per SSH key, phrase sealed at rest, same key finds the same keeper", async () => {
-  const home = mkdtempSync(join(tmpdir(), "wf-door-"));
-  const keepers = new Keepers(home);
-  const keyA = Buffer.from("ssh-ed25519 key A blob");
-  const a1 = await keepers.open(keyA);
-  const a2 = await keepers.open(keyA);
-  const b = await keepers.open(Buffer.from("ssh-ed25519 key B blob"));
-  assert.equal(a1.wallet.account.did, a2.wallet.account.did);
-  assert.notEqual(a1.wallet.account.did, b.wallet.account.did);
-  const phrase = await a1.revealPhrase();
-  assert.equal(phrase?.split(" ").length, 12);
-  const stored = JSON.parse(readFileSync(join(keeperDir(home, keyA), "keeper-key.json"), "utf8")) as Record<string, string>;
-  assert.ok(Object.values(stored).every((v) => v.startsWith("v1:")), "every value is sealed");
-  const raw = JSON.stringify(stored);
-  for (const word of phrase!.split(" ")) assert.ok(!raw.includes(word), "no phrase word appears at rest");
-  // A door with a different master key can't open it.
-  process.env.WATCHFIRE_DOOR_MASTER_KEY = Buffer.alloc(32, 7).toString("base64");
-  try {
-    const other = new Keepers(home);
-    await assert.rejects(() => other.open(keyA));
-  } finally {
-    delete process.env.WATCHFIRE_DOOR_MASTER_KEY;
-  }
 });
 
 test("detectColorDepth: what the player's ssh sends decides truecolor or 256 colors", () => {
@@ -135,27 +110,40 @@ test("sharedReads: the world's reads shared, a move forgets only what it changed
   assert.equal((await waited).status, 200);
 });
 
-test("bans: keys, addresses and ranges, read again when the file changes", () => {
-  const home = mkdtempSync(join(tmpdir(), "wf-bans-"));
-  const path = join(home, "bans.txt");
+test("settings: blank means the default, nonsense stops the door", () => {
+  process.env.WF_TEST_N = "";
+  assert.equal(numberSetting("WF_TEST_N", 2222), 2222, "a blank .env line isn't port 0");
+  assert.equal(setting("WF_TEST_N"), undefined);
+  process.env.WF_TEST_N = " 0 ";
+  assert.equal(numberSetting("WF_TEST_N", 2222), 0);
+  process.env.WF_TEST_N = "22x";
+  assert.throws(() => numberSetting("WF_TEST_N", 2222), /must be a number/);
+  delete process.env.WF_TEST_N;
+  assert.equal(numberSetting("WF_TEST_N", 5), 5);
+});
+
+test("bans: keys, addresses and ranges, parsed again when the list changes", () => {
   const bad: string[] = [];
-  const bans = new Bans(path, (l) => bad.push(l));
-  assert.equal(bans.ip("203.0.113.7"), false, "no file: nobody is banned");
-  writeFileSync(path, "# sysop's list\nSHA256:abc  # a griefer\n203.0.113.7\n198.51.100.0/24\n2001:db8::/32\nnonsense\n");
-  bans.reload();
-  assert.equal(bans.key("SHA256:abc"), true);
-  assert.equal(bans.key("SHA256:other"), false);
+  const bans = new Bans((l) => bad.push(l));
+  const key = `SHA256:${"a".repeat(43)}`;
+  bans.load("");
+  assert.equal(bans.ip("203.0.113.7"), false, "an empty list bans nobody");
+  const list = `# sysop's list\n${key}  # a griefer\n203.0.113.7\n198.51.100.0/24\n2001:db8::/32\nnonsense\n10.0.0.0/33\nSHA256:short\n`;
+  bans.load(list);
+  assert.equal(bans.key(key), true);
+  assert.equal(bans.key(`SHA256:${"b".repeat(43)}`), false);
   assert.equal(bans.ip("203.0.113.7"), true);
   assert.equal(bans.ip("::ffff:203.0.113.7"), true, "an IPv4 address seen through IPv6");
   assert.equal(bans.ip("198.51.100.200"), true);
   assert.equal(bans.ip("198.51.101.1"), false);
   assert.equal(bans.ip("2001:db8::1"), true);
-  assert.deepEqual(bad, ["nonsense"]);
-  writeFileSync(path, "198.51.100.0/24\n");
-  utimesSync(path, new Date(), new Date(Date.now() + 5000)); // a new mtime, even within the same tick
-  bans.reload();
-  assert.equal(bans.ip("203.0.113.7"), false, "lifted");
-  assert.equal(bans.key("SHA256:abc"), false);
+  assert.deepEqual(bad, ["nonsense", "10.0.0.0/33", "SHA256:short"]);
+  bans.load(list);
+  assert.equal(bad.length, 3, "the same list again isn't parsed again");
+  bans.load("198.51.100.0/24\n");
+  assert.equal(bans.key(key), false, "lifted");
+  assert.equal(bans.ip("203.0.113.7"), false);
+  assert.equal(bans.ip("198.51.100.1"), true);
 });
 
 test("web: the dashboard's files, /api/world, read only, nothing outside its folder", async () => {

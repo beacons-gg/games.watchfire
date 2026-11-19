@@ -57,7 +57,7 @@ Also: `newsBetween`/`snapshotOf` (the news), `safeText`/`stripControls` (player 
 
 ## SSH door (`apps/door`)
 
-An `ssh2` server that renders the CLI's Ink app (`watchfire/app`, exported by `apps/cli` for the workspace) into each SSH channel, with a `Session` per player: a custodial keeper (or a guest), a shared paced `fetch`, a UTC day, and its `door` extras (`online`, `onScreen`, `motd`, `revealPhrase`). See [ssh-door.md](ssh-door.md).
+An `ssh2` server that renders the CLI's Ink app (`watchfire/app`, exported by `apps/cli` for the workspace) into each SSH channel, with a `Session` per player: a custodial keeper (or a guest), a shared paced `fetch`, a UTC day, and its `door` extras (`online`, `onScreen`, `motd`, `revealPhrase`). What it keeps (host key, keepers, motd, bans, the website's watch log) goes through one `DoorStore` (`store.ts`): files in its home folder, or Postgres. The website (`site.ts`) runs inside the door or, with `WATCHFIRE_DOOR_PORT=0`, alone. See [ssh-door.md](ssh-door.md).
 
 ## Dashboard (`apps/dashboard`)
 

@@ -1,64 +1,63 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import ssh2, { type AuthContext, type Connection, type ServerChannel } from "ssh2";
 import { render } from "ink";
-import { DEFAULT_SERVERS, keeperName, safeText } from "@watchfire/core";
+import { keeperName, safeText } from "@watchfire/core";
 import { App, type ScreenName } from "watchfire/app";
 import { detectColorDepth } from "watchfire/local";
 import { memoryKeeperStore, type OnlineNode, type Page, type Session } from "watchfire/session";
 import { nodeLabel } from "watchfire/ui";
 import { Bans } from "./bans.ts";
-import { readOrCreate } from "./files.ts";
-import { Keepers } from "./keepers.ts";
+import { Keepers, masterKey } from "./keepers.ts";
 import { pacedFetch } from "./pacer.ts";
+import { log, numberSetting } from "./env.ts";
+import { BIND, FIRE_TYPE, PORT, SERVERS, WEB_PORT, WRITES_PER_MINUTE } from "./settings.ts";
 import { sharedReads } from "./shared.ts";
+import { startSite } from "./site.ts";
+import { openStore } from "./store.ts";
 import { asTerminal, type Pty, type Terminal } from "./terminal.ts";
-import { startWeb } from "./web.ts";
-import { WorldWatch } from "./world.ts";
 
 const { Server, utils } = ssh2;
 
-// --- settings -------------------------------------------------------------------------------
-const env = process.env;
-const HOME = resolve(env.WATCHFIRE_DOOR_HOME ?? ".watchfire-door");
-const PORT = Number(env.WATCHFIRE_DOOR_PORT ?? 2222);
-const BIND = env.WATCHFIRE_DOOR_BIND ?? "0.0.0.0";
-const MAX_SESSIONS = Number(env.WATCHFIRE_DOOR_MAX_SESSIONS ?? 50);
-const MAX_PER_IP = Number(env.WATCHFIRE_DOOR_MAX_PER_IP ?? 5);
-const IDLE_MS = Number(env.WATCHFIRE_DOOR_IDLE_MINUTES ?? 5) * 60_000;
-const MAX_SESSION_MS = Number(env.WATCHFIRE_DOOR_MAX_MINUTES ?? 60) * 60_000;
-const SERVERS = env.WATCHFIRE_SERVERS?.split(",").filter(Boolean) ?? [...DEFAULT_SERVERS];
-const WRITES_PER_MINUTE = Number(env.WATCHFIRE_DOOR_WRITES_PER_MINUTE ?? 100);
-/** The website (the dashboard and its /api/world): its port, 0 for none. */
-const WEB_PORT = Number(env.WATCHFIRE_WEB_PORT ?? 8080);
-const WEB_ROOT = resolve(env.WATCHFIRE_WEB_ROOT ?? fileURLToPath(new URL("../../dashboard/dist/", import.meta.url)));
-/** The port players dial, when it isn't the one the door listens on (Docker maps it). */
-const PUBLIC_PORT = Number(env.WATCHFIRE_DOOR_PUBLIC_PORT ?? PORT);
-/** The join command the website shows; by default worked out from the address the visitor used. */
-const JOIN = env.WATCHFIRE_JOIN;
-/** Testing only: another room type, invisible to normal play. */
-const FIRE_TYPE: { type?: string } = env.WATCHFIRE_FIRE_TYPE ? { type: env.WATCHFIRE_FIRE_TYPE } : {};
+// --- settings (the door's own; the ones it shares with the website are in settings.ts) ---------
+const MAX_SESSIONS = numberSetting("WATCHFIRE_DOOR_MAX_SESSIONS", 50);
+const MAX_PER_IP = numberSetting("WATCHFIRE_DOOR_MAX_PER_IP", 5);
+const IDLE_MS = numberSetting("WATCHFIRE_DOOR_IDLE_MINUTES", 5) * 60_000;
+const MAX_SESSION_MS = numberSetting("WATCHFIRE_DOOR_MAX_MINUTES", 60) * 60_000;
 const GUEST_HINT = "Guests can only watch. Connect with an SSH key to keep a fire.";
 /** A keeper can page once this often. */
 const PAGE_GAP_MS = 5_000;
 
-mkdirSync(HOME, { recursive: true, mode: 0o700 });
-const keepers = new Keepers(HOME);
+/** Where the door keeps things: Postgres with WATCHFIRE_DOOR_DATABASE_URL, else files in WATCHFIRE_DOOR_HOME. */
+const store = await openStore();
+const keepers = new Keepers(store, masterKey(store));
 // Every session's Beacon requests: the world's reads shared across the door, writes paced under
 // the budget. `fresh` reads a fire right after the live socket said it changed.
 const forAll = sharedReads(pacedFetch(WRITES_PER_MINUTE));
 // Every live session's Ink app adds a process 'beforeExit' listener; that's expected here.
 process.setMaxListeners(MAX_SESSIONS + 20);
 
-const log = (event: string, fields: Record<string, unknown> = {}) =>
-  console.log(JSON.stringify({ t: new Date().toISOString(), event, ...fields }));
-
-const bans = new Bans(join(HOME, "bans.txt"), (line) => log("bans-unreadable-line", { line }));
+// The sysop's texts, read every 10 seconds and kept here: a slow database never holds up a login
+// or the sweep below, and one that can't be read keeps the last ones. At start they must be read:
+// a door that can't see its ban list doesn't open.
+const bans = new Bans((line) => log("bans-unreadable-line", { line }));
+let motdText = "";
+const readSysopTexts = async () => {
+  const [banList, motd] = await Promise.all([store.text("bans"), store.text("motd")]);
+  bans.load(banList);
+  motdText = motd;
+};
+await readSysopTexts();
+setInterval(async () => {
+  try {
+    // A read stuck on a dead connection gives up here, before the next one is due.
+    await Promise.race([readSysopTexts(), new Promise((_, no) => setTimeout(() => no(new Error("timed out")), 8_000).unref())]);
+  } catch (e) {
+    log("sysop-texts-unreadable", { error: String((e as Error)?.message ?? e) });
+  }
+}, 10_000).unref();
 
 /** The door's host key, made once. Players' ssh clients remember it, so it must not change. */
-const hostKey = () => readOrCreate(join(HOME, "host_key"), () => utils.generateKeyPairSync("ed25519").private);
+const hostKey = await store.hostKey(() => utils.generateKeyPairSync("ed25519").private);
 
 // --- callers: who's on the line -------------------------------------------------------------
 /** One caller on the line: what who's online shows of them, and the door's own bookkeeping. */
@@ -115,12 +114,8 @@ function page(from: Caller, to: OnlineNode, text: string): string | null {
   return null;
 }
 
-/**
- * Every 10 seconds, for the whole door: read the ban list again if it changed, and show out
- * anyone banned, idle too long, or on too long.
- */
+/** Every 10 seconds, for the whole door: show out anyone banned, idle too long, or on too long. */
 setInterval(() => {
-  bans.reload();
   const now = Date.now();
   for (const c of callers.values()) {
     if (bans.ip(c.ip) || (c.fingerprint && bans.key(c.fingerprint))) c.end?.("banned", "The door has closed to you.");
@@ -143,13 +138,7 @@ const ACTIVITY: Record<ScreenName, string> = {
   watch: "choosing a place",
 };
 
-const motd = () => {
-  try {
-    return safeText(readFileSync(join(HOME, "motd.txt"), "utf8"), 200) || undefined;
-  } catch {
-    return undefined;
-  }
-};
+const motd = () => safeText(motdText, 200) || undefined;
 
 // --- who is connecting ----------------------------------------------------------------------
 type Who = { kind: "keeper"; sshKey: Buffer; fingerprint: string } | { kind: "guest" };
@@ -291,7 +280,7 @@ async function play(channel: ServerChannel, who: Who, ip: string, pty: Pty, colo
 }
 
 // --- the server -----------------------------------------------------------------------------
-const server = new Server({ hostKeys: [hostKey()], banner: "Watchfire: keep the fires burning.\r\n" }, (client: Connection, info) => {
+const server = new Server({ hostKeys: [hostKey], banner: "Watchfire: keep the fires burning.\r\n" }, (client: Connection, info) => {
   const ip = info.ip;
   let who: Who | null = null;
   // Listen for errors first: a refused caller resetting the connection must not bring the door
@@ -360,35 +349,17 @@ const server = new Server({ hostKeys: [hostKey()], banner: "Watchfire: keep the 
   });
 });
 
-server.listen(PORT, BIND, () => log("listening", { bind: BIND, port: PORT, home: HOME, servers: SERVERS }));
+server.listen(PORT, BIND, () => log("listening", { bind: BIND, port: PORT, store: store.where, servers: SERVERS }));
 
 // --- the website ----------------------------------------------------------------------------
-if (WEB_PORT > 0) {
-  const world = new WorldWatch({
-    servers: SERVERS,
-    ...FIRE_TYPE,
-    fetch: forAll.fetch,
-    file: join(HOME, "world.json"),
-    log,
-  });
-  void world.start();
-  startWeb({
-    port: WEB_PORT,
-    bind: BIND,
-    root: WEB_ROOT,
-    report: () => world.report(),
-    online: () => callers.size,
-    join: (host) => JOIN ?? `ssh ${PUBLIC_PORT === 22 ? "" : `-p ${PUBLIC_PORT} `}${host}`,
-    log,
-  });
-}
+if (WEB_PORT > 0) startSite(store, forAll.fetch, { online: () => callers.size });
 
 /** Say goodbye to everyone on the line, then go (docker stop allows 10 seconds). */
 const shutdown = () => {
   log("shutting-down", { sessions: callers.size });
   server.close();
   for (const c of [...callers.values()]) c.end?.("shutdown", "The door is closing for a moment. Come back soon.");
-  setTimeout(() => process.exit(0), 500).unref();
+  setTimeout(() => void store.close().finally(() => process.exit(0)), 500).unref();
 };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);

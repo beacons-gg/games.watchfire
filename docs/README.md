@@ -10,7 +10,7 @@ Watchfire is a BBS-style door game played in a terminal: locally with `npx`, or 
 | [beacon-integration.md](beacon-integration.md) | How the game maps onto Beacon: slug, server, the fire policy, items, what the server enforces and what it doesn't, and the gotchas we hit |
 | [architecture.md](architecture.md) | The monorepo, the shared core, the CLI, the dashboard, identity storage and distribution |
 | [ssh-door.md](ssh-door.md) | The `ssh` door: sessions, identity, rate limits, security, and the extras only a door can do (who's online, pages, bans) |
-| [deploy.md](deploy.md) | Running the door in Docker, on a home network or a server: build, secrets, ports, backups, updates, the sysop's chores |
+| [deploy.md](deploy.md) | Running the door in Docker or Dokploy: secrets, settings, backups, sysop commands |
 | [roadmap.md](roadmap.md) | Phases, what's done, and open questions |
 
 ## Status

@@ -11,7 +11,7 @@ export function configDir(): string {
   return join(base, "watchfire");
 }
 
-async function readJson<T>(path: string): Promise<T | null> {
+export async function readJson<T>(path: string): Promise<T | null> {
   try {
     return JSON.parse(await readFile(path, "utf8")) as T;
   } catch (e: any) {
@@ -23,7 +23,7 @@ async function readJson<T>(path: string): Promise<T | null> {
 let tmpCounter = 0;
 
 /** Write atomically with owner-only permissions. Each write gets its own temp file. */
-async function writePrivate(path: string, data: string): Promise<void> {
+export async function writePrivate(path: string, data: string): Promise<void> {
   const tmp = `${path}.${process.pid}.${++tmpCounter}.tmp`;
   await writeFile(tmp, data, { mode: 0o600 });
   await rename(tmp, path);
@@ -36,7 +36,7 @@ async function writePrivate(path: string, data: string): Promise<void> {
  * process.
  */
 const queues = new Map<string, Promise<unknown>>();
-function serial(path: string) {
+export function serial(path: string) {
   return <T>(step: () => Promise<T>): Promise<T> => {
     const run = (queues.get(path) ?? Promise.resolve()).then(step, step);
     const tail = run.then(
@@ -52,6 +52,10 @@ function serial(path: string) {
   };
 }
 
+/** A keeper's two files: its wallet entries, and its game state. */
+export const KEY_FILE = "keeper-key.json";
+export const STATE_FILE = "state.json";
+
 /**
  * The wallet store: one JSON file readable only by the player, like an SSH private key. The SDK
  * keeps the recovery phrase in it, so the file is the keeper. `watchfire phrase` prints the phrase
@@ -59,7 +63,7 @@ function serial(path: string) {
  */
 export async function fileKeyStore(dir = configDir()): Promise<SecureKeyStore> {
   await mkdir(dir, { recursive: true, mode: 0o700 });
-  const path = join(dir, "keeper-key.json");
+  const path = join(dir, KEY_FILE);
   const all = async () => (await readJson<Record<string, string>>(path)) ?? {};
   const one = serial(path);
   return {
@@ -76,7 +80,7 @@ export async function fileKeyStore(dir = configDir()): Promise<SecureKeyStore> {
 
 export async function fileKeeperStore(dir = configDir()): Promise<KeeperStore> {
   await mkdir(dir, { recursive: true, mode: 0o700 });
-  const path = join(dir, "state.json");
+  const path = join(dir, STATE_FILE);
   const one = serial(path);
   return {
     load: () => one(async () => ({ ...emptyKeeper(), ...((await readJson<KeeperState>(path)) ?? {}) })),

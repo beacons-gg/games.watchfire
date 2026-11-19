@@ -34,13 +34,14 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build /src/apps/door/dist/ ./
 COPY --from=build /src/apps/dashboard/dist/ ./web/
-# /data holds the host key, the keepers and (unless given another way) the master key.
+# The door keeps its data in Postgres (WATCHFIRE_DOOR_DATABASE_URL), or else in files in /data,
+# a volume, so a plain `docker run` doesn't lose its keepers with the container.
 RUN mkdir /data && chown node:node /data
 USER node
 VOLUME /data
 # 2222: the game, over ssh. 8080: the website (the game explained, and its world live).
 EXPOSE 2222 8080
-# Is it taking calls? A plain TCP connect (the door doesn't log callers who never sign in).
+# Is it taking calls? On the ssh port, or the website's when it runs alone (WATCHFIRE_DOOR_PORT=0).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD ["node", "-e", "require('net').connect(process.env.WATCHFIRE_DOOR_PORT,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+  CMD ["node", "door.mjs", "health"]
 CMD ["node", "door.mjs"]

@@ -8,13 +8,15 @@ import { useWorld } from "./useWorld.ts";
 
 export function App() {
   const { report, error, now } = useWorld();
-  const join = report?.join ?? `ssh -p 2222 ${location.hostname}`;
+  // Until the door answers, the likeliest command; null once it says this site has no door to offer.
+  const join = report ? report.join : `ssh -p 2222 ${location.hostname}`;
   const [selected, setSelected] = useState<string | null>(null);
 
   const fires = report?.fires ?? [];
   const burning = fires.filter((f) => isLit(f, now)).sort((a, b) => a.outAt - b.outAt);
   const dark = fires.filter((f) => !isLit(f, now));
   const darkToday = dark.filter((f) => now - f.outAt < DAY_SEC).length;
+  const litToday = fires.filter((f) => now - f.placedAt < DAY_SEC).length;
   const chosen = fires.find((f) => f.id === selected) ?? null;
   // The hero burns higher the more fires are burning: a low glow when none are.
   const strength = burning.length === 0 ? 0.35 : 0.7 + 0.3 * Math.min(1, burning.length / 6);
@@ -28,7 +30,7 @@ export function App() {
         <nav aria-label="Sections">
           <a href="#tonight">Tonight</a>
           <a href="#how">How to play</a>
-          <a href="#join">Join</a>
+          {join ? <a href="#join">Join</a> : null}
         </nav>
         <LiveBadge report={report} error={error} />
       </header>
@@ -43,10 +45,15 @@ export function App() {
               You have <strong>{RULES.logsPerDay} logs</strong> today. Lay them on the fires you care about, light new ones at
               real places, and come back tomorrow to see what survived the night. A visit takes about a minute.
             </p>
-            <JoinCommand command={join} />
+            {join ? <JoinCommand command={join} /> : null}
             <p className="hint">
-              Nothing to install: it runs in your terminal, like the door games of the old bulletin boards.{" "}
-              <a href="#join">First time? Here's how.</a>
+              Nothing to install: it runs in your terminal, like the door games of the old bulletin boards.
+              {join ? (
+                <>
+                  {" "}
+                  <a href="#join">First time? Here's how.</a>
+                </>
+              ) : null}
             </p>
           </div>
           <dl className="stats">
@@ -57,7 +64,12 @@ export function App() {
               tone={burning[0] ? urgency(burning[0].outAt - now) : undefined}
             />
             <Stat label="went dark today" value={report ? String(darkToday) : "…"} />
-            <Stat label={report?.online === 1 ? "keeper at the door" : "at the door now"} value={report?.online != null ? String(report.online) : "…"} />
+            {report && report.online === null ? (
+              // No door here to count: what was lit instead, beside what went dark.
+              <Stat label="lit today" value={String(litToday)} />
+            ) : (
+              <Stat label={report?.online === 1 ? "keeper at the door" : "at the door now"} value={report ? String(report.online) : "…"} />
+            )}
           </dl>
         </section>
 
@@ -120,7 +132,7 @@ export function App() {
         </section>
 
         <HowToPlay />
-        <Join command={join} />
+        {join ? <Join command={join} /> : null}
       </main>
 
       <footer className="foot">

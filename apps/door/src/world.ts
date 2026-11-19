@@ -1,4 +1,3 @@
-import { readFile, rename, writeFile } from "node:fs/promises";
 import {
   connect,
   foldLook,
@@ -16,6 +15,7 @@ import {
   type Watchfire,
   type WorldLook,
 } from "@watchfire/core";
+import type { DoorStore } from "./store.ts";
 
 /** How often the door looks at the world for the website. */
 const LOOK_MS = 30_000;
@@ -31,15 +31,15 @@ interface Saved {
  * The door's own look at the world, for the website: every 30 seconds it reads the fires on the
  * door's servers (through the door's shared reads, so it costs the servers almost nothing more),
  * and folds it in the way the game does (core's look.ts): fires labelled with their nearest city
- * and their lighters' names, and what changed written up as the watch log. The log is kept in
- * `<home>/world.json`, so a restart doesn't empty it.
+ * and their lighters' names, and what changed written up as the watch log. The log is kept in the
+ * door's store (`world.json`, or the database), so a restart doesn't empty it.
  */
 export class WorldWatch {
-  private readonly opts: { servers: readonly string[]; type?: string; fetch: typeof fetch; file: string; log(event: string, fields?: object): void };
+  private readonly opts: { servers: readonly string[]; type?: string; fetch: typeof fetch; store: Pick<DoorStore, "loadWorld" | "saveWorld">; log(event: string, fields?: object): void };
   private conn: Watchfire | null = null;
   private fires: FireView[] = [];
   private saved: Saved = { snapshot: null, news: [] };
-  /** What was last written to world.json, so an unchanged world isn't written again. */
+  /** What was last saved, so an unchanged world isn't saved again. */
   private written = "";
   private readonly names = new NameBook((did) => this.conn?.displayName(did) ?? Promise.resolve(null), 30 * 60_000);
   private readonly places = new PlaceBook();
@@ -51,9 +51,11 @@ export class WorldWatch {
 
   async start(): Promise<void> {
     try {
-      this.saved = JSON.parse(await readFile(this.opts.file, "utf8")) as Saved;
-    } catch {
-      // First start, or an unreadable file: begin a new log.
+      const saved = await this.opts.store.loadWorld();
+      if (saved) this.saved = JSON.parse(saved) as Saved;
+    } catch (e) {
+      // An unreadable log: begin a new one.
+      this.opts.log("world-log-unreadable", { error: String((e as Error)?.message ?? e) });
     }
     // One look at a time: a slow look still running when the next is due would read the same old
     // snapshot and write its news a second time.
@@ -93,14 +95,14 @@ export class WorldWatch {
       snapshot: folded.snapshot,
       news: [...this.saved.news, ...folded.news.map(({ at, text }) => ({ at, text }))].slice(-NEWS_KEPT),
     };
-    await this.save();
-
     this.latest = {
       at: nowSec(),
       fires: this.fires.map((f) => this.toReport(f, conn)),
       news: this.saved.news,
       partial: look.failedHosts.length > 0,
     };
+    // The site has the look already; a save that fails (the database away) is tried with the next one.
+    await this.save().catch((e) => this.opts.log("world-save-failed", { error: String((e as Error)?.message ?? e) }));
 
     // Nobody answered, or a server that was down (or a pending membership) has changed: connect
     // afresh next time, as the game does.
@@ -128,13 +130,11 @@ export class WorldWatch {
     };
   }
 
-  /** Write world.json, unless the fires and the log are as last written (most looks). */
+  /** Save the log, unless the fires and the log are as last saved (most looks). */
   private async save(): Promise<void> {
     const key = JSON.stringify([this.saved.snapshot?.fires, this.saved.news.length, this.saved.news.at(-1)]);
     if (key === this.written) return;
-    const tmp = `${this.opts.file}.tmp`;
-    await writeFile(tmp, JSON.stringify(this.saved));
-    await rename(tmp, this.opts.file);
+    await this.opts.store.saveWorld(JSON.stringify(this.saved));
     this.written = key;
   }
 }

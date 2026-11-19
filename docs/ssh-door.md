@@ -13,29 +13,49 @@ No install, no sign-up: the most door-game way to play. BBS callers dialed in an
 
 ```sh
 pnpm door                                   # listens on :2222, keeps its data in ./.watchfire-door
+pnpm door help                              # the sysop's commands (motd, bans, import)
 ssh -p 2222 localhost                       # with your SSH key: your keeper
 ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 ```
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `WATCHFIRE_DOOR_HOME` | `./.watchfire-door` | Host key, master key, keepers, `motd.txt`, `bans.txt` |
-| `WATCHFIRE_DOOR_PORT` / `_BIND` | `2222` / `0.0.0.0` | Where it listens |
+| `WATCHFIRE_DOOR_HOME` | `./.watchfire-door` | Where a door kept in files keeps them: host key, master key, keepers, `motd.txt`, `bans.txt`, `world.json` |
+| `WATCHFIRE_DOOR_DATABASE_URL` | | `postgres://user@host:5432/db`: keep everything in Postgres instead (see [Where the data lives](#where-the-data-lives)) |
+| `WATCHFIRE_DOOR_DATABASE_PASSWORD_FILE` | | A file holding the database's password (a Docker secret), if it isn't in the URL |
+| `WATCHFIRE_DOOR_PORT` / `_BIND` | `2222` / `0.0.0.0` | Where it listens. Port `0`: no door, the website alone (no keepers, no master key) |
 | `WATCHFIRE_DOOR_MAX_SESSIONS` | `50` | Sessions at once; the next caller hears "the door is full" |
 | `WATCHFIRE_DOOR_MAX_PER_IP` | `5` | Connections per address (one game per connection) |
 | `WATCHFIRE_DOOR_IDLE_MINUTES` | `5` | No keystrokes for this long ends the session |
 | `WATCHFIRE_DOOR_MAX_MINUTES` | `60` | The longest one session lasts |
 | `WATCHFIRE_DOOR_WRITES_PER_MINUTE` | `100` | Beacon writes per server for the whole door (see [Rate limits](#rate-limits)) |
-| `WATCHFIRE_DOOR_MASTER_KEY` | made once in `master.key` | 32 bytes, base64: seals every keeper's recovery phrase |
+| `WATCHFIRE_DOOR_MASTER_KEY` | made once in `master.key` | 32 bytes, hex or base64: seals every keeper's recovery phrase |
 | `WATCHFIRE_DOOR_MASTER_KEY_FILE` | | A file holding it instead (a Docker secret) |
 | `WATCHFIRE_SERVERS` | `9q72.beacons.gg` | Servers a new keeper starts with |
 | `WATCHFIRE_FIRE_TYPE` | `watchfire` | Testing only: another room type, invisible to normal play |
 | `WATCHFIRE_WEB_PORT` | `8080` | The website (`0`: none) |
 | `WATCHFIRE_WEB_ROOT` | `apps/dashboard/dist` | The built website (`/app/web` in the image) |
 | `WATCHFIRE_DOOR_PUBLIC_PORT` | the door's port | The port players dial, for the website's join command (Docker maps it) |
-| `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | The join command the website shows, if it should name something else |
+| `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | The join command the website shows, if it should name something else. With no door here, the door it points to; unset, the site shows no join command |
 
-`<home>/motd.txt` is the sysop's announcement: it greets every player as they arrive, and edits take effect for the next caller. `<home>/bans.txt` is the ban list (see [Bans](#bans)).
+The sysop's announcement (the motd) greets every player as they arrive; a change reaches players arriving within 10 seconds. With the ban list (see [Bans](#bans)), it's set with the door's own commands, which work the same on files and Postgres:
+
+```sh
+pnpm door motd "The Edinburgh fire needs logs!"    # in Docker: docker compose exec door node door.mjs motd "…"
+pnpm door motd ""                                  # clear it
+pnpm door ban SHA256:pSx4… spamming pages          # a key, an address or a range, and why
+pnpm door unban SHA256:pSx4…
+pnpm door bans                                     # the list
+```
+
+A door kept in files keeps them in `<home>/motd.txt` and `<home>/bans.txt`, which can also be edited by hand.
+
+## Where the data lives
+
+Everything the door keeps, but the master key: its host key, the keepers, the motd and ban list, and the website's watch log (`store.ts`).
+
+- **In files** (the default): in `WATCHFIRE_DOOR_HOME`. `host_key`, `keepers/<sha256 of the SSH key>/`, `motd.txt`, `bans.txt`, `world.json`.
+- **In Postgres**, with `WATCHFIRE_DOOR_DATABASE_URL` (the Docker deploy's default). The door makes its two tables on first connect: `door_values` (the host key, the motd, the ban list and the watch log, by name) and `keepers` (one row per SSH key: its sealed wallet entries in `keys`, its game state in `state`). One door per database. A door kept in Postgres must be given its master key (`WATCHFIRE_DOOR_MASTER_KEY` or `_FILE`): it won't make one on its disk, where nobody would think to back it up, and it never puts it in the database. `pnpm door import <folder>` copies a door kept in files into its database (the keepers' sealed values as they are, so the same master key opens them), replacing what's there.
 
 `pnpm -C apps/door run build` bundles the door into one file, `apps/door/dist/door.mjs` (SDK, game, ssh2 and cities inlined): `node door.mjs` runs it anywhere with Node 24, no install. The Docker image is that file on `node:24-bookworm-slim`.
 
@@ -59,7 +79,7 @@ The door is **custodial**: it holds a Beacon wallet for each player, because an 
 
 "none" auth is refused on purpose, so ssh clients try their keys before falling back to keyboard-interactive.
 
-- Each keeper lives in `<home>/keepers/<sha256 of the SSH key>/`: `keeper-key.json` (the SDK's wallet entries, recovery phrase included, each value sealed with AES-256-GCM under the door's master key) and `state.json` (watch place, logs today, embers, servers, last snapshot; no secrets).
+- Each keeper is kept under its SSH key's SHA-256 (see [Where the data lives](#where-the-data-lives)): the SDK's wallet entries, recovery phrase included, each value sealed with AES-256-GCM under the door's master key; and its game state (watch place, logs today, embers, servers, last snapshot; no secrets).
 - **Take your keeper home:** You → K shows the recovery phrase, after a warning, so a player can `watchfire import` on their own machine. Both copies can play as them afterwards; the door says so.
 - **One session per keeper:** a second connection with the same key hears "Your keeper is already by the fire on node 03". Each session keeps its own copy of the keeper's state, so two at once would overwrite each other's embers and servers. Guests have no limit beyond the address limit.
 - **A door day is a UTC day** (the door can't know each player's timezone), so logs reset at midnight UTC. Times on screen are in the door's timezone; run the door with `TZ=UTC` to match.
@@ -77,20 +97,21 @@ For our own servers, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's address 
 
 - **Who's online** (O on the main screen): every node, who's on it (keeper name, or "a guest"), how long, and what they're doing ("at a fire", "surveying the world"…).
 - **Pages:** on who's online, ↑↓ to a node and P to send it one line (up to 120 characters). It shows on whatever screen they're on and rings their terminal bell; their last few pages are listed on who's online. Keepers can page (guests can read pages, not send them), once every 5 seconds. The door logs that a page was sent, never what it said.
-- **Sysop announcements**: `motd.txt`.
+- **Sysop announcements**: `motd`.
 - **The website** (port 8080): the game explained, how to join, and the world live. See [The website](#the-website).
 
 ## The website
 
 The door also serves `apps/dashboard`, the game's flyer: what Watchfire is, how to play, how to join (the `ssh` command, worked out from the address each visitor used, with steps for a Mac, Windows and phones), and the world live. Nothing to log in to; it only reads.
 
-- `world.ts` looks at the world every 30 seconds through the door's shared reads, on the door's servers (`WATCHFIRE_SERVERS`): the fires, their nearest cities, their lighters' names, and the watch log (what was lit, fed, filled and lost), kept in `<home>/world.json`.
+- `world.ts` looks at the world every 30 seconds through the door's shared reads, on the door's servers (`WATCHFIRE_SERVERS`): the fires, their nearest cities, their lighters' names, and the watch log (what was lit, fed, filled and lost), kept with the door's data (`world.json`, or the database).
 - `web.ts` serves the built site and `GET /api/world` (that look, plus the join command and how many are at the door). GET and HEAD only; files only from the site's folder; `default-src 'self'`.
+- With `WATCHFIRE_DOOR_PORT=0` the website runs alone (`site.ts`), for a public site whose door is elsewhere: it shows `WATCHFIRE_JOIN`'s command (or none), and "lit today" where it would count who's at the door. Give it its own data (files, or its own database): two watch logs in one database would trip over each other.
 - `pnpm dashboard` runs the site with live reload, reading `/api/world` from a door running locally (`pnpm door`).
 
 ## Bans
 
-`<home>/bans.txt`, one entry a line, `#` starts a comment:
+One entry a line, `#` starts a comment (`pnpm door ban` writes them like this; `<home>/bans.txt` for a door kept in files):
 
 ```
 SHA256:pSx4ZODTZVdpnXk1zqy8OGQWW/CNoJlmzBEzAWhZoDk   # an SSH key, as session-start logs name it
@@ -98,12 +119,12 @@ SHA256:pSx4ZODTZVdpnXk1zqy8OGQWW/CNoJlmzBEzAWhZoDk   # an SSH key, as session-st
 198.51.100.0/24                                      # a range, IPv4 or IPv6
 ```
 
-The door looks at it every 10 seconds and reads it again when it has changed: no restart. A banned address is turned away before it can sign in; a banned key hears "This key isn't welcome here."; anyone already on who matches is shown out within 10 seconds ("The door has closed to you."). A banned key can still come in without it, as a guest who can only watch, unless its address is banned too. Lines the door can't read are logged (`bans-unreadable-line`) and skipped.
+The door reads it every 10 seconds: no restart. `ban` refuses an entry it can't read (a fingerprint is `SHA256:` and 43 characters). A banned address is turned away before it can sign in; a banned key hears "This key isn't welcome here."; anyone already on who matches is shown out within 10 seconds ("The door has closed to you."). A banned key can still come in without it, as a guest who can only watch, unless its address is banned too. Lines the door can't read (hand-edited ones) are logged (`bans-unreadable-line`) and skipped. A list it can't fetch (the database away) keeps the last one it read (`sysop-texts-unreadable`); a door that can't read it at start doesn't start.
 
 ## Security
 
-- Host key: ed25519, made once in `<home>/host_key` (0600). Keep it with the data: players' ssh clients remember it.
-- Master key: in `WATCHFIRE_DOOR_MASTER_KEY`, the file `WATCHFIRE_DOOR_MASTER_KEY_FILE` names (Docker), or `<home>/master.key` (0600). Losing it loses every keeper the door holds (players who took theirs home keep them). Back it up separately from the data; move it to a KMS before real players arrive.
+- Host key: ed25519, made once and kept with the data (`<home>/host_key`, 0600, or the database). Players' ssh clients remember it.
+- Master key: in `WATCHFIRE_DOOR_MASTER_KEY`, the file `WATCHFIRE_DOOR_MASTER_KEY_FILE` names (Docker), or, for a door kept in files, `<home>/master.key` (0600). Never in the database. Losing it loses every keeper the door holds (players who took theirs home keep them). Back it up separately from the data; move it to a KMS before real players arrive.
 - Limits: sessions in total, sessions per address, one game per connection, one session per keeper, idle timeout, maximum session length; pages once every 5 seconds; bans.
 - All player text (fire names, names, pages, the motd) goes through `safeText` before it reaches a terminal.
 - Connections that never sign in (port scanners, the container's health check) aren't logged.

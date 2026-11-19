@@ -1,0 +1,25 @@
+# Keep the door's data in files, in the `door-data` volume, instead of in Postgres: no database
+# runs. Turn it on in .env (Compose reads COMPOSE_FILE from there):
+#
+#   COMPOSE_FILE=compose.yaml:compose.files.yaml
+#
+# WATCHFIRE_DB_PASSWORD isn't needed then. See docs/deploy.md.
+services:
+  door:
+    depends_on: !reset {}
+    environment:
+      WATCHFIRE_DOOR_DATABASE_URL: ""
+    secrets: !override [master_key]
+    volumes:
+      # Host key, keepers, motd.txt, bans.txt, world.json. Back it up (the master key kept apart).
+      - door-data:/data
+
+  db:
+    # Only with --profile postgres: not started.
+    profiles: [postgres]
+
+secrets:
+  db_password: !reset null
+
+volumes:
+  door-data:

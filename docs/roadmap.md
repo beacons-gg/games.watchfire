@@ -42,12 +42,13 @@
 - [x] Custodial keepers per SSH key, recovery phrases sealed with AES-256-GCM under a master key; watch-only guests without a key
 - [x] Take your keeper home (You → K shows the phrase for `watchfire import`)
 - [x] One paced write budget per server for the whole door
-- [x] Who's online, sysop announcements (`motd.txt`)
+- [x] Who's online, sysop announcements (the motd)
 - [x] Limits: sessions in total and per address, idle timeout, session length; no shell, exec, SFTP or forwarding
 - [x] Tested over real ssh: keeper and guest at once, light and feed through the door, quit, Ctrl+C, hangup, idle, the same key returning as the same keeper; refusals of exec, SFTP and both forwards
 - [x] Shared reads: discovery and fires read once for the whole door (10 s), a move forgets what it changed; live changes read fresh, one request per change for all its watchers
-- [x] One session per keeper; page a node (P on who's online, with the terminal bell); ban list (`bans.txt`: keys, addresses, ranges; live)
+- [x] One session per keeper; page a node (P on who's online, with the terminal bell); ban list (keys, addresses, ranges; live)
 - [x] Container image (one bundled file on Node 24) and `compose.yaml`, built and run locally (see deploy.md)
+- [x] Data in Postgres (the compose default) or files; sysop commands (`motd`, `ban`, `unban`, `import`)
 - [ ] Deploy: host, domain, DNS; master key in a KMS
 
 ## Phase 4: the website ✅ (2026-11-19)
@@ -55,7 +56,7 @@
 - [x] `apps/dashboard` (Vite + React), served by the door on :8080 from its own look at the world (`/api/world`): the game explained, how to join (Mac, Windows, phones), today's numbers, a map of the fires, the ones closest to going out, the watch log
 - [x] The game's flame on the page (core's simulation, shared with the terminal)
 - [x] A player's guide: [how-to-play.md](how-to-play.md)
-- [ ] Family playtest on the home network (deploy.md, "On the home network")
+- [ ] Family playtest on the home network (see deploy.md)
 - [ ] Later, for beacons.gg: a static build reading Beacon directly (needs `BEACON_CORS_ORIGINS`)
 
 ## Phase 5: more

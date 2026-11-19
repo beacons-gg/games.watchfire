@@ -26,10 +26,10 @@ export interface WebOptions {
   /** The built dashboard (`apps/dashboard/dist`). */
   root: string;
   report(): WorldLook | null;
-  /** Callers on the door now. */
-  online(): number;
-  /** The join command for a visitor who reached the site at `host` (from their Host header). */
-  join(host: string): string;
+  /** Callers on the door now, or null with no door here. */
+  online(): number | null;
+  /** The join command for a visitor who reached the site at `host` (from their Host header), or null for none. */
+  join(host: string): string | null;
   log(event: string, fields?: object): void;
 }
 

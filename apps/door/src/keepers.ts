@@ -3,9 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadOrCreateWallet, revealRecoveryPhrase, type SecureKeyStore } from "@beaconsgg/client-sdk";
 import type { Wallet } from "@beaconsgg/identity";
-import { fileKeeperStore, fileKeyStore } from "watchfire/local";
 import type { KeeperStore } from "watchfire/session";
 import { readOrCreate } from "./files.ts";
+import { setting } from "./env.ts";
+import type { DoorStore, FileStore } from "./store.ts";
 
 export interface Keeper {
   wallet: Wallet;
@@ -14,24 +15,26 @@ export interface Keeper {
   revealPhrase(): Promise<string | null>;
 }
 
-/** Where a keeper's files live: one folder per SSH key, named by the key's SHA-256. */
-export const keeperDir = (home: string, sshKey: Buffer) => join(home, "keepers", createHash("sha256").update(sshKey).digest("hex"));
+/** A keeper's id in the store: its SSH key's SHA-256, hex. */
+const keeperId = (sshKey: Buffer) => createHash("sha256").update(sshKey).digest("hex");
 
 /**
  * The door holds a Beacon wallet for each SSH key: an SSH session can't sign with the player's own
- * keys. Each keeper lives in `<home>/keepers/<sha256 of the SSH key>/`, the wallet store's values
- * (recovery phrase included) encrypted with the door's master key (AES-256-GCM).
+ * keys. Each keeper is kept in the door's store under its SSH key's SHA-256, the wallet store's
+ * values (recovery phrase included) encrypted with the door's master key (AES-256-GCM), so the
+ * store (files or a database) is no use without it.
  *
- * The master key (32 bytes, base64) comes from the environment or a secret file, or is made once
- * and kept in `<home>/master.key` (see masterKey). Moving it to a KMS is on the roadmap.
+ * The master key (32 bytes, hex or base64) comes from the environment or a secret file, or, for a door
+ * kept in files, is made once and kept in `<home>/master.key` (see masterKey). Moving it to a KMS
+ * is on the roadmap.
  */
 export class Keepers {
-  private readonly home: string;
+  private readonly store: DoorStore;
   private readonly key: Buffer;
 
-  constructor(home: string) {
-    this.home = home;
-    this.key = masterKey(home);
+  constructor(store: DoorStore, key: Buffer) {
+    this.store = store;
+    this.key = key;
   }
 
   /**
@@ -39,10 +42,9 @@ export class Keepers {
    * seats one session per keeper, so two opens of one key never race to make two wallets.
    */
   async open(sshKey: Buffer): Promise<Keeper> {
-    const dir = keeperDir(this.home, sshKey);
-    const keys = sealed(await fileKeyStore(dir), this.key);
-    const [wallet, store] = await Promise.all([loadOrCreateWallet(keys), fileKeeperStore(dir)]);
-    return { wallet, store, revealPhrase: () => revealRecoveryPhrase(keys) };
+    const kept = await this.store.keeper(keeperId(sshKey));
+    const keys = sealed(kept.keys, this.key);
+    return { wallet: await loadOrCreateWallet(keys), store: kept.state, revealPhrase: () => revealRecoveryPhrase(keys) };
   }
 }
 
@@ -73,13 +75,19 @@ function sealed(store: SecureKeyStore, key: Buffer): SecureKeyStore {
 
 /**
  * The master key: WATCHFIRE_DOOR_MASTER_KEY itself, or the file WATCHFIRE_DOOR_MASTER_KEY_FILE
- * names (a Docker secret), or else `<home>/master.key`, made on first start.
+ * names (a Docker secret), or else, for a door kept in files, `<home>/master.key`, made on first
+ * start. A door kept in a database must be given it: making one would leave it on this disk,
+ * where nobody would think to back it up.
  */
-function masterKey(home: string): Buffer {
-  const { WATCHFIRE_DOOR_MASTER_KEY: value, WATCHFIRE_DOOR_MASTER_KEY_FILE: file } = process.env;
-  const source = value ? "WATCHFIRE_DOOR_MASTER_KEY" : (file ?? join(home, "master.key"));
-  const text = value || (file ? readFileSync(file, "utf8") : readOrCreate(source, () => randomBytes(32).toString("base64")));
-  const key = Buffer.from(text.trim(), "base64");
-  if (key.length !== 32) throw new Error(`${source} must hold 32 bytes, base64`);
+export function masterKey(store: DoorStore): Buffer {
+  const value = setting("WATCHFIRE_DOOR_MASTER_KEY");
+  const file = setting("WATCHFIRE_DOOR_MASTER_KEY_FILE");
+  if (!value && !file && store.kind !== "files") throw new Error("A door kept in a database needs its master key: set WATCHFIRE_DOOR_MASTER_KEY_FILE (or WATCHFIRE_DOOR_MASTER_KEY)");
+  const source = value ? "WATCHFIRE_DOOR_MASTER_KEY" : (file ?? join((store as FileStore).home, "master.key"));
+  const text = value ?? (file ? readFileSync(file, "utf8") : readOrCreate(source, () => randomBytes(32).toString("base64")));
+  // Hex (openssl rand -hex 32: nothing a settings page could mangle) or base64.
+  const trimmed = text.trim();
+  const key = Buffer.from(trimmed, /^[0-9a-f]{64}$/i.test(trimmed) ? "hex" : "base64");
+  if (key.length !== 32) throw new Error(`${source} must hold 32 bytes, hex or base64`);
   return key;
 }

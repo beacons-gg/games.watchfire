@@ -1,28 +1,25 @@
-import { readFileSync, statSync } from "node:fs";
 import { BlockList, isIP } from "node:net";
 
 /**
- * The sysop's ban list: `<home>/bans.txt`, one entry a line, `#` starts a comment.
+ * The sysop's ban list, one entry a line, `#` starts a comment:
  *
  *   SHA256:pSx4ZODTZVdpnXk1zqy8OGQWW/CNoJlmzBEzAWhZoDk   # an SSH key, as the door's logs name it
  *   203.0.113.7                                          # an address
  *   198.51.100.0/24                                      # a range (IPv4 or IPv6)
  *
- * The door calls `reload()` every few seconds, which reads the file again only when it has
- * changed: a ban takes effect without a restart, and players already on are shown out. A banned key can still come in as a guest (watch
- * only) unless its address is banned too.
+ * It lives in the door's store (`bans.txt`, or the database) and the sysop's `ban` and `unban`
+ * commands edit it. The door reads it every few seconds and `load`s it, which parses it again
+ * only when it has changed: a ban takes effect without a restart, and players already on are
+ * shown out. A banned key can still come in as a guest (watch only) unless its address is banned too.
  */
 export class Bans {
-  private readonly path: string;
   private readonly warn: (line: string) => void;
-  private mtime = -1;
+  private text: string | null = null;
   private keys = new Set<string>();
   private ips = new BlockList();
 
-  constructor(path: string, warn: (line: string) => void = () => {}) {
-    this.path = path;
+  constructor(warn: (line: string) => void = () => {}) {
     this.warn = warn;
-    this.reload();
   }
 
   /** Is this address banned? */
@@ -37,42 +34,38 @@ export class Bans {
     return this.keys.has(fingerprint);
   }
 
-  /** Read the list again if the file has changed since the last read. */
-  reload(): void {
-    let mtime = 0;
-    try {
-      mtime = statSync(this.path).mtimeMs;
-    } catch {
-      // No file: nobody is banned.
-    }
-    if (mtime === this.mtime) return;
-    this.mtime = mtime;
+  /** Take the list as it is now; parsed again only when it has changed. */
+  load(text: string): void {
+    if (text === this.text) return;
+    this.text = text;
     this.keys = new Set();
     this.ips = new BlockList();
-    if (!mtime) return;
-    // A list the door can't read (a directory, no permission) bans nobody rather than crashing
-    // every connection that checks it.
-    let text: string;
-    try {
-      text = readFileSync(this.path, "utf8");
-    } catch {
-      return this.warn(`(${this.path} can't be read)`);
-    }
-    for (const raw of text.split("\n")) {
-      const entry = raw.replace(/#.*/, "").trim();
+    for (const line of text.split("\n")) {
+      const entry = entryOf(line);
       if (!entry) continue;
-      if (entry.startsWith("SHA256:")) {
-        this.keys.add(entry);
-        continue;
-      }
-      const [net, bits] = entry.split("/");
-      const family = isIP(net ?? "");
-      const type = family === 4 ? "ipv4" : "ipv6";
-      const prefix = Number(bits);
-      if (family && bits === undefined) this.ips.addAddress(net!, type);
-      // BlockList throws on a prefix longer than the address (10.0.0.0/33).
-      else if (family && /^\d+$/.test(bits ?? "") && prefix <= (family === 4 ? 32 : 128)) this.ips.addSubnet(net!, prefix, type);
+      const ban = banOf(entry);
+      if (ban?.kind === "key") this.keys.add(entry);
+      else if (ban?.kind === "address") this.ips.addAddress(ban.net, ban.type);
+      else if (ban) this.ips.addSubnet(ban.net, ban.prefix, ban.type);
       else this.warn(entry);
     }
   }
+}
+
+/** A line's entry, without its comment. */
+export const entryOf = (line: string) => line.replace(/#.*/, "").trim();
+
+type Family = "ipv4" | "ipv6";
+
+/** What an entry bans: a key, an address or a range. Null when it's none of them. */
+export function banOf(entry: string): { kind: "key" } | { kind: "address"; net: string; type: Family } | { kind: "range"; net: string; prefix: number; type: Family } | null {
+  if (/^SHA256:[A-Za-z0-9+/]{43}$/.test(entry)) return { kind: "key" };
+  const [net = "", bits, ...rest] = entry.split("/");
+  const family = isIP(net);
+  if (!family || rest.length) return null;
+  const type = family === 4 ? "ipv4" : "ipv6";
+  if (bits === undefined) return { kind: "address", net, type };
+  // BlockList throws on a prefix longer than the address (10.0.0.0/33).
+  const prefix = Number(bits);
+  return /^\d+$/.test(bits) && prefix <= (family === 4 ? 32 : 128) ? { kind: "range", net, prefix, type } : null;
 }
