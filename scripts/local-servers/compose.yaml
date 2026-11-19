@@ -1,0 +1,60 @@
+# Two throwaway Beacon servers for testing Watchfire's multi-server features on your machine.
+# Not for the internet: no signing keys (each start makes a new identity) and no TLS.
+#
+#   pnpm servers:up      (pnpm servers:down to stop and wipe them)
+#
+# - Members Hall (http://localhost:3001): worldwide, `request` access. Players ask to join; approve
+#   them with `node scripts/local-operator.ts approve <did>`.
+# - Edinburgh Local (http://localhost:3002): open, covers only geohash `gcv` (around Edinburgh).
+#
+# BEACON_IMAGE defaults to the image Beacon's docs name; set it to a 1.1 build you can pull.
+# What both Beacon servers share.
+x-beacon: &beacon
+  image: ${BEACON_IMAGE:-beaconsgg/server:latest}
+  depends_on: { mkdb: { condition: service_completed_successfully } }
+  healthcheck:
+    test: node -e "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+    interval: 3s
+    start_period: 10s
+    retries: 20
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: beacon
+      POSTGRES_PASSWORD: beacon
+      POSTGRES_DB: beacon
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "beacon", "-h", "127.0.0.1"]
+      interval: 2s
+      retries: 30
+  mkdb:
+    image: postgres:16
+    depends_on: { db: { condition: service_healthy } }
+    environment: { PGPASSWORD: beacon }
+    entrypoint:
+      - sh
+      - -c
+      - psql -h db -U beacon -tc "select 1 from pg_database where datname='beacon_b'" | grep -q 1 || psql -h db -U beacon -c 'create database beacon_b'
+  members:
+    <<: *beacon
+    ports: ["3001:3001"]
+    environment:
+      BEACON_DATABASE_URL: postgres://beacon:beacon@db:5432/beacon
+      BEACON_HOST: localhost:3001
+      BEACON_PUBLIC_URL: http://localhost:3001
+      BEACON_NAME: Members Hall
+      BEACON_ACCESS_LEVEL: request
+      BEACON_ADMINS: ${BEACON_ADMINS:-}
+      BEACON_CORS_ORIGINS: "*"
+  edinburgh:
+    <<: *beacon
+    ports: ["3002:3001"]
+    environment:
+      BEACON_DATABASE_URL: postgres://beacon:beacon@db:5432/beacon_b
+      BEACON_HOST: localhost:3002
+      BEACON_PUBLIC_URL: http://localhost:3002
+      BEACON_NAME: Edinburgh Local
+      BEACON_COVERAGE: gcv
+      BEACON_CORS_ORIGINS: "*"

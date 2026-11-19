@@ -1,5 +1,5 @@
 import { Box, Text, useInput } from "ink";
-import { distanceKm, FIRE_TUNING, formatDistance, LOGS_PER_DAY, safeText } from "@watchfire/core";
+import { ago, distanceKm, FIRE_TUNING, formatDistance, LOGS_PER_DAY, safeText, uncoveredText } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { BurnBar, cell, FlameView, Frame, grow, Keys, Message, TimeLeft, useSize } from "../ui.tsx";
@@ -11,7 +11,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
   const { width, height } = useSize();
   const flameRows = height >= 40 ? 8 : height >= 30 ? 6 : 4;
   // Rows left for the fire list and the news after everything fixed on the screen.
-  const free = height - 15 - flameRows;
+  const free = height - 15 - flameRows - (game.watchUncovered ? 1 : 0);
   const listRows = Math.max(3, Math.min(9, free));
   const newsRows = Math.max(1, free - listRows + 1);
 
@@ -46,6 +46,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
   const logDots = "●".repeat(game.logsLeft) + "○".repeat(LOGS_PER_DAY - game.logsLeft);
   const nameW = grow(26, width, 0.4, 50);
   const barW = grow(10, width, 0.1, 20);
+  const serverW = grow(12, width, 0.1, 24);
 
   return (
     <Frame
@@ -79,6 +80,12 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
             </Text>{" "}
             {burning.length === 1 ? "fire" : "fires"} burning
             {dark > 0 ? <Text color="#78716c"> · {dark} gone dark lately</Text> : null}
+            {game.serversNeedingLook > 0 ? (
+              <Text color="#fde68a">
+                {" "}
+                · {game.serversNeedingLook} {game.serversNeedingLook === 1 ? "server needs" : "servers need"} a look (S)
+              </Text>
+            ) : null}
             {game.freshNews > 0 ? (
               <Text color="#78716c">
                 {" "}
@@ -100,21 +107,30 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
           </>
         )}
       </Text>
+      {game.watchUncovered && watch ? (
+        <Text color="#fde68a" wrap="truncate-end">
+          {uncoveredText(watch.name)} (S)
+        </Text>
+      ) : null}
       <Box marginTop={1} flexDirection="column">
         <Text color="#a8a29e">{watch ? "Nearest fires" : "Fires closest to going out"}</Text>
         {nearest.length === 0 && game.status === "ready" ? (
           <Text color="#78716c">  No fires burning. Press L to light the first.</Text>
         ) : null}
-        {nearest.map(({ f, km }, i) => (
-          <Text key={f.id} wrap="truncate-end">
-            <Text color="#fbbf24">{i + 1}</Text> {cell(safeText(f.name), nameW)} <BurnBar secondsLeft={f.secondsLeft} width={barW} />{" "}
-            <TimeLeft secondsLeft={f.secondsLeft} pad={7} />
-            <Text color="#a8a29e">
-              {f.logs}/{FIRE_TUNING.capacity} logs · {f.keepers.length} kept
-              {km === null ? "" : ` · ${formatDistance(km)}`}
+        {nearest.map(({ f, km }, i) => {
+          const seen = game.lastSeen(f.id);
+          return (
+            <Text key={f.id} wrap="truncate-end">
+              <Text color="#fbbf24">{i + 1}</Text> {cell(safeText(f.name), nameW)} <BurnBar secondsLeft={f.secondsLeft} width={barW} />{" "}
+              <TimeLeft secondsLeft={f.secondsLeft} stale={seen !== null} pad={8} />
+              {game.multiServer ? <Text color="#78716c">{cell(game.serverNameOf(f.id), serverW)} </Text> : null}
+              <Text color="#a8a29e">
+                {f.logs}/{FIRE_TUNING.capacity} logs · {seen !== null ? `last seen ${ago(seen)}` : `${f.keepers.length} kept`}
+                {km === null ? "" : ` · ${formatDistance(km)}`}
+              </Text>
             </Text>
-          </Text>
-        ))}
+          );
+        })}
       </Box>
       <Box marginTop={1} flexDirection="column" flexGrow={1}>
         {latest.length === 0 ? <Text> </Text> : null}

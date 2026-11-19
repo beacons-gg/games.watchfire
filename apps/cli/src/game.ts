@@ -1,15 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ageFire,
   asSaved,
   clock,
+  hostOf,
   connect,
   FIRE_TUNING,
-  jitter,
   keeperName,
   logsLeft,
   MAX_NAME,
+  carryUnheard,
+  membershipChangeText,
+  joinResultText,
+  membershipChanges,
+  moveErrorText,
+  needsLook,
+  needsRecheck,
+  serverLabel,
+  downHosts,
   mergeLook,
   MOVE_TEXT,
+  moveServer as moveInList,
   moveBlocker,
   nearestCity,
   newsBetween,
@@ -25,6 +36,7 @@ import {
   withServer,
   WORLD_CELLS,
   type FireView,
+  type LatLng,
   type Move,
   type NewsLine,
   type SavedServer,
@@ -64,14 +76,32 @@ export interface Game {
   servers: ServerStatus[];
   /** True when `--server` fixed the list for this session. */
   serversFixed: boolean;
+  /** True when fires come from more than one server, so screens say which server holds each. */
+  multiServer: boolean;
+  /** Servers that need the player's attention: unreachable, new key, or a request waiting. */
+  serversNeedingLook: number;
+  /** True when a server stopped answering since we connected (its fires show as last seen). */
+  isQuiet(s: ServerStatus): boolean;
+  /** When a fire was last read, if its server didn't answer the latest look; else null. */
+  lastSeen(fireId: string): number | null;
+  /** True when the keeper's watch place is outside every server they can light fires on. */
+  watchUncovered: boolean;
+  /** True when a place is known to be outside every server the player can light fires on. */
+  uncovered(at: LatLng): boolean;
+  /** The server holding a fire. */
+  serverOf(fireId: string): ServerStatus | undefined;
+  /** What to call the server holding a fire. */
+  serverNameOf(fireId: string): string;
+  /** Servers that would take a new fire at a place, the default first. */
+  lightTargets(at: LatLng): ServerStatus[];
   /** A player's name: their Beacon display name if they have one, else their keeper name. */
   nameOf(did: string | undefined): string;
   /** Look up display names for these accounts in the background. */
   wantNames(dids: (string | undefined)[]): void;
   /** True when the player's own name comes from their Beacon profile. */
   hasProfileName: boolean;
-  /** True when the player can act on this fire (not a guest, and they play on its server). */
-  canWrite(fireId: string): boolean;
+  /** Why the player can't act on this fire's server (watching, not a member), or null. */
+  readOnlyReason(fireId: string): string | null;
   /** Why the player can't make this move on this fire, or null (see `moveBlocker`). */
   blocker(move: Move, fire: FireView): string | null;
   setMessage(m: string): void;
@@ -82,7 +112,7 @@ export interface Game {
   /** Watch one fire live while its screen is open. Returns the unsubscribe. */
   watchFire(id: string): () => void;
   feed(id: string): Promise<void>;
-  light(at: { lat: number; lng: number }, name: string): Promise<FireView | null>;
+  light(at: LatLng, name: string, origin: string): Promise<FireView | null>;
   takeEmber(id: string): Promise<void>;
   warm(id: string): Promise<void>;
   rake(id: string): Promise<void>;
@@ -90,6 +120,10 @@ export interface Game {
   addServer(address: string, mode: ServerMode): Promise<boolean>;
   removeServer(origin: string): Promise<void>;
   setServerMode(origin: string, mode: ServerMode): Promise<void>;
+  /** Move a server up (-1) or down (1) the list: earlier servers win ties for new fires. */
+  moveServer(origin: string, dir: -1 | 1): Promise<void>;
+  /** Ask to join a members-only server, with an optional note to its operator. */
+  requestJoin(origin: string, note?: string): Promise<void>;
 }
 
 export function useGame(session: Session): Game {
@@ -114,6 +148,10 @@ export function useGame(session: Session): Game {
   namesRef.current = names;
   const loaded = useRef(false);
   const busyRef = useRef(false);
+  // Each connect gets a number; a slower, older one finishing late is dropped (the list may have
+  // changed meanwhile). `looking` keeps timer looks from piling up behind a slow one.
+  const connectGen = useRef(0);
+  const looking = useRef(false);
   const nameFetched = useRef(new Map<string, number>());
 
   const me = session.wallet?.account.did ?? null;
@@ -171,13 +209,17 @@ export function useGame(session: Session): Game {
     if (!conn || !conn.servers.length) return;
     try {
       // A server that didn't answer hasn't lost its fires: mergeLook keeps what we last knew.
-      const list = mergeLook(firesRef.current, await conn.fires(WORLD_CELLS));
+      const look = await conn.fires(WORLD_CELLS);
+      const list = mergeLook(firesRef.current, look);
       setFires(sortFires(list));
       setStatus("ready");
       setError(undefined);
       const k = keeperRef.current;
-      const snap = snapshotOf(list);
-      const lines = newsBetween(k.snapshot ?? null, snap, { ...FIRE_TUNING, me, nameOf });
+      // Fires from servers that didn't answer keep their old snapshot entries: no news about them
+      // (not "went dark", not "gone") until their server is heard again.
+      const answered = look.answeredHosts;
+      const snap = carryUnheard(k.snapshot ?? null, snapshotOf(list), answered);
+      const lines = newsBetween(k.snapshot ?? null, snap, { ...FIRE_TUNING, me, nameOf, answered });
       if (!loaded.current) {
         loaded.current = true;
         setFreshNews(lines.length);
@@ -192,7 +234,9 @@ export function useGame(session: Session): Game {
           }
         }
       }
-      await saveKeeper({ ...keeperRef.current, snapshot: snap, embers });
+      // Phase and time left come back from the clock (ageFire), so they aren't stored.
+      const known = list.map(({ phase: _p, secondsLeft: _s, stale: _st, ...f }) => f as FireView);
+      await saveKeeper({ ...keeperRef.current, snapshot: snap, embers, known });
       void label(list);
       wantNames([me ?? undefined, ...list.map((f) => f.lighter)]);
     } catch (e: any) {
@@ -205,14 +249,22 @@ export function useGame(session: Session): Game {
 
   /** (Re)connect to the player's servers, pin first-seen keys, and read the world. */
   const reconnect = useCallback(async () => {
-    setStatus("connecting");
+    // Only say "connecting" when there's nothing on screen yet; a re-check shouldn't blank it.
+    if (!firesRef.current.length) setStatus("connecting");
+    const gen = ++connectGen.current;
     try {
       const conn = await connect({
         servers: serversFixed ? asSaved(session.fixedServers!) : savedServers(),
+        wallet: session.wallet,
         ...(session.fireType ? { type: session.fireType } : {}),
       });
+      if (gen !== connectGen.current) return; // a newer connect (e.g. the list changed) supersedes this one
       wf.current = conn;
-      setServers(conn.statuses);
+      setServers([...conn.statuses]);
+      const changed = membershipChanges(keeperRef.current.servers, conn.statuses);
+      if (changed.length) {
+        setMessage(changed.map(membershipChangeText).join(" "));
+      }
       if (!serversFixed) {
         const pinned = pinStatuses(keeperRef.current.servers, conn.statuses);
         if (JSON.stringify(pinned) !== JSON.stringify(keeperRef.current.servers)) {
@@ -220,7 +272,8 @@ export function useGame(session: Session): Game {
         }
       }
       if (!conn.servers.length) {
-        setFires([]);
+        // Keep the fires of servers that are only down, as last seen; drop the rest (removed, new key).
+        setFires(sortFires(mergeLook(firesRef.current, { fires: [], failedHosts: downHosts(conn.statuses) })));
         setStatus("offline");
         setError(conn.statuses.length ? "none of your servers is hosting Watchfire right now" : "you have no servers. Press S to add one");
         return;
@@ -231,13 +284,24 @@ export function useGame(session: Session): Game {
       setError(e?.message ?? String(e));
     }
     // savedServers reads refs and session fields already listed.
-  }, [readWorld, saveKeeper, serversFixed, session.fixedServers, session.defaultServers, session.fireType]);
+  }, [readWorld, saveKeeper, serversFixed, session.fixedServers, session.defaultServers, session.fireType, session.wallet]);
 
-  /** Look again: read the world, or try connecting again if no server answered last time. */
-  const refresh = useCallback(
-    async () => (wf.current?.servers.length ? readWorld() : reconnect()),
-    [readWorld, reconnect],
-  );
+  /**
+   * Look again: read the world. If a server was down or a request to join is waiting, also check
+   * just those (a ping, a membership ask) and connect afresh only when one of them changed.
+   */
+  const refresh = useCallback(async () => {
+    if (looking.current) return;
+    looking.current = true;
+    try {
+      const conn = wf.current;
+      if (!conn) return await reconnect();
+      if (conn.servers.length) await readWorld();
+      if (conn.statuses.some(needsRecheck) && (await conn.recheck())) await reconnect();
+    } finally {
+      looking.current = false;
+    }
+  }, [readWorld, reconnect]);
 
   // Connect once per session; the server screen reconnects itself.
   useEffect(() => {
@@ -247,6 +311,11 @@ export function useGame(session: Session): Game {
       const k = await session.store.load();
       keeperRef.current = k;
       setKeeperState(k);
+      // Show the fires as last read (marked as such) while we look again.
+      if (k.known?.length) {
+        firesRef.current = sortFires(mergeLook(k.known, { fires: [], failedHosts: k.known.map((f) => hostOf(f.id)) }));
+        setFires(firesRef.current);
+      }
       if (stopped) return;
       await reconnect();
       if (stopped) return;
@@ -276,8 +345,6 @@ export function useGame(session: Session): Game {
     [refreshFire],
   );
 
-  const canWrite = useCallback((id: string) => !isGuest && !!wf.current?.writableOrigin(id), [isGuest]);
-
   const left = logsLeft(keeper, session.today());
 
   const blocker = (move: Move, f: FireView) =>
@@ -299,7 +366,8 @@ export function useGame(session: Session): Game {
       if (!session.wallet) return setMessage(guestHint);
       if (!conn) return setMessage("Not connected to any fires yet.");
       if (fire) {
-        if (!conn.writableOrigin(fire.id)) return setMessage(MOVE_TEXT.watchOnly);
+        const readOnly = conn.readOnlyReason(fire.id);
+        if (readOnly) return setMessage(readOnly);
         const f = firesRef.current.find((x) => x.id === fire.id);
         const k = keeperRef.current;
         const why =
@@ -312,8 +380,8 @@ export function useGame(session: Session): Game {
       try {
         const msg = await fn(session.wallet, conn);
         if (msg !== null) setMessage(msg);
-      } catch (e: any) {
-        setMessage(e?.code ? refusalText(e.code) : `The fire sputters: ${safeText(e?.message ?? e, 120)}`);
+      } catch (e) {
+        setMessage(moveErrorText(e));
       } finally {
         busyRef.current = false;
         setBusy(false);
@@ -339,11 +407,11 @@ export function useGame(session: Session): Game {
   );
 
   const light = useCallback(
-    async (at: { lat: number; lng: number }, name: string) => {
+    async (at: LatLng, name: string, origin: string) => {
       let lit: FireView | null = null;
       await act("Striking a light", async (w, conn) => {
         if (logsLeft(keeperRef.current, session.today()) <= 0) return MOVE_TEXT.outOfLogs;
-        const made = await conn.light(w, jitter(at, 800), safeText(name, 48));
+        const made = await conn.light(w, at, safeText(name, 48), origin);
         lit = made;
         await saveKeeper(spendLog(keeperRef.current, session.today()));
         replaceFire(made);
@@ -419,9 +487,15 @@ export function useGame(session: Session): Game {
     [act],
   );
 
-  /** Change the saved server list and reconnect. `--server` sessions can't. */
+  /**
+   * Change the saved server list. `--server` sessions can't. With `local`, the change is applied to
+   * the open connection (order, play/watch) instead of connecting again.
+   */
   const editServers = useCallback(
-    async (edit: (list: SavedServer[]) => SavedServer[] | Promise<SavedServer[] | null>) => {
+    async (
+      edit: (list: SavedServer[]) => SavedServer[] | Promise<SavedServer[] | null>,
+      local?: (conn: Watchfire, list: SavedServer[]) => void,
+    ) => {
       if (serversFixed) {
         setMessage("This session's servers were set with --server.");
         return false;
@@ -429,7 +503,13 @@ export function useGame(session: Session): Game {
       const next = await edit(savedServers());
       if (!next) return false;
       await saveKeeper({ ...keeperRef.current, servers: next });
-      await reconnect();
+      const conn = wf.current;
+      if (local && conn) {
+        local(conn, next);
+        setServers([...conn.statuses]);
+      } else {
+        await reconnect();
+      }
       return true;
     },
     // savedServers reads refs and session fields already listed.
@@ -442,15 +522,15 @@ export function useGame(session: Session): Game {
         setBusy(true);
         setMessage(`Checking ${safeText(address, 60)}…`);
         try {
-          const st = await (wf.current ?? (await connect({ servers: [] }))).check(address.trim(), mode);
+          const st = await (wf.current ?? (await connect({ servers: [] }))).check(address.trim());
           if (st.state === "unreachable") {
             setMessage(`No Beacon server answered at ${safeText(address, 60)}.`);
             return null;
           }
           setMessage(
             st.state === "notHosting"
-              ? `Added ${st.name ?? st.origin}. It doesn't host Watchfire, so it's only used to look up names.`
-              : `Added ${st.name ?? st.origin}.`,
+              ? `Added ${serverLabel(st)}. It doesn't host Watchfire, so it's only used to look up names.`
+              : `Added ${serverLabel(st)}.`,
           );
           return withServer(list, st, mode);
         } catch (e: any) {
@@ -469,16 +549,63 @@ export function useGame(session: Session): Game {
   );
 
   const setServerMode = useCallback(
-    async (origin: string, mode: ServerMode) => void (await editServers((list) => withMode(list, origin, mode))),
+    async (origin: string, mode: ServerMode) =>
+      void (await editServers(
+        (list) => withMode(list, origin, mode),
+        (conn) => conn.setMode(origin, mode),
+      )),
     [editServers],
   );
+
+  const moveServer = useCallback(
+    async (origin: string, dir: -1 | 1) =>
+      void (await editServers(
+        (list) => moveInList(list, origin, dir),
+        (conn, list) => conn.reorder(list.map((s) => s.origin)),
+      )),
+    [editServers],
+  );
+
+  const requestJoin = useCallback(
+    (origin: string, note?: string) =>
+      act("Knocking at the door", async (w, conn) => {
+        const r = await conn.requestToJoin(w, origin, note);
+        if (!r.ok) return refusalText(r.error, "requestAccess");
+        // The connection now knows the new standing (a member can play there at once). Remember it,
+        // so the game can say so when the operator answers.
+        setServers([...conn.statuses]);
+        if (!serversFixed) await saveKeeper({ ...keeperRef.current, servers: pinStatuses(keeperRef.current.servers, conn.statuses) });
+        return joinResultText(conn.statuses.find((s) => s.origin === origin) ?? { origin }, r.access);
+      }),
+    [act, saveKeeper, serversFixed],
+  );
+
+  // These read the open connection, which `servers` state mirrors; they re-run on each render.
+  const serverOf = (id: string) => wf.current?.serverOf(id);
+  const serverNameOf = (id: string) => {
+    const s = serverOf(id);
+    return s ? serverLabel(s) : hostOf(id);
+  };
+  const readOnlyReason = (id: string) => wf.current?.readOnlyReason(id) ?? null;
+  const lightTargets = (at: LatLng) => wf.current?.lightTargets(at) ?? [];
+  const multiServer = servers.filter((s) => s.state === "ok").length > 1;
+  const staleReadAt = useMemo(() => new Map(fires.filter((f) => f.stale).map((f) => [f.id, f.readAt])), [fires]);
+  const lastSeen = (id: string) => staleReadAt.get(id) ?? null;
+  // "No server covers it" is only known when every play server answered (core's coverageAt).
+  const uncovered = (at: LatLng) => !isGuest && !!wf.current && wf.current.coverageAt(at) === "uncovered";
+  const watchUncovered = !!keeper.watch && uncovered(keeper.watch);
+  // Servers that went quiet since connecting: their fires are showing as last seen.
+  const quietHosts = useMemo(() => new Set(fires.filter((f) => f.stale).map((f) => hostOf(f.id))), [fires]);
+  const isQuiet = (s: ServerStatus) => !!s.host && quietHosts.has(s.host);
+  const serversNeedingLook = servers.filter((s) => needsLook(s) || isQuiet(s)).length;
 
   const setWatch = useCallback(async (watch: WatchPlace) => saveKeeper({ ...keeperRef.current, watch }), [saveKeeper]);
   const markKeyHintSeen = useCallback(async () => saveKeeper({ ...keeperRef.current, toldKeyHint: true }), [saveKeeper]);
 
   return {
     status, error, fires, places, keeper, me, isGuest, guestHint, logsLeft: left, news, freshNews, message, busy,
-    servers, serversFixed, nameOf, wantNames, hasProfileName: !!me && !!names[me], canWrite, blocker,
+    servers, serversFixed, multiServer, readOnlyReason, lastSeen, watchUncovered, uncovered, serversNeedingLook, isQuiet,
+    serverOf, serverNameOf, lightTargets, moveServer, requestJoin, nameOf, wantNames, hasProfileName: !!me && !!names[me], blocker,
     setMessage, setWatch, markKeyHintSeen, refresh, refreshFire, watchFire, feed, light, takeEmber, warm, rake,
     setName, addServer, removeServer, setServerMode,
   };

@@ -34,6 +34,10 @@ export interface FireView {
   emberHolders: string[];
   /** Accounts that have raked their logs back from the ashes. */
   raked: string[];
+  /** When this was read from its server (epoch seconds). */
+  readAt: number;
+  /** Set when its server didn't answer the latest look: this is the fire as last seen (`readAt`). */
+  stale?: boolean;
 }
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0));
@@ -64,6 +68,7 @@ export function readFire(room: RoomLike, now = nowSec()): FireView {
     kindling: contents.find((i) => (i.birth as any)?.kindling)?.unique,
     emberHolders: Object.keys(granted).filter((did) => (granted[did]?.embers?.length ?? 0) > 0),
     raked: claimed,
+    readAt: now,
   }, now);
 }
 
@@ -82,7 +87,9 @@ export const hostOf = (roomId: string): string => roomId.slice(roomId.indexOf("@
 export function mergeLook(previous: FireView[], look: { fires: FireView[]; failedHosts: string[] }, now = nowSec()): FireView[] {
   const failed = new Set(look.failedHosts);
   const seen = new Set(look.fires.map((f) => f.id));
-  const kept = previous.filter((f) => failed.has(hostOf(f.id)) && !seen.has(f.id)).map((f) => ageFire(f, now));
+  const kept = previous
+    .filter((f) => failed.has(hostOf(f.id)) && !seen.has(f.id))
+    .map((f) => ({ ...ageFire(f, now), stale: true }));
   return [...look.fires, ...kept];
 }
 

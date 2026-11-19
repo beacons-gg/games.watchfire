@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import { ago, clock, distanceKm, FIRE_TUNING, formatDistance, formatDuration, hostOf, safeText } from "@watchfire/core";
+import { serverHost } from "@beaconsgg/client-sdk";
+import { accessLabel, ago, clock, lastSeenText, serverLabel, distanceKm, FIRE_TUNING, formatDistance, formatDuration, safeText } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { strengthFor } from "../flame.ts";
@@ -48,7 +49,11 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
   const hasEmber = !!me && f.emberHolders.includes(me);
   const full = f.logs >= FIRE_TUNING.capacity;
   // A guest, or a fire on a server the player only watches, can't make any move here.
-  const readOnly = !game.canWrite(fireId);
+  // A guest, or a fire on a server the player can't act on (watching, not a member, down).
+  const reason = game.readOnlyReason(fireId);
+  const readOnly = game.isGuest || reason !== null;
+  const server = game.serverOf(fireId);
+  const seen = game.lastSeen(fireId);
   const off = (move: Parameters<Game["blocker"]>[0]) => readOnly || game.blocker(move, f) !== null;
 
   const watch = game.keeper.watch;
@@ -84,6 +89,17 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
         {place ? `near ${place}` : " "}
         {watch ? ` · ${awayFrom(distanceKm(watch, f.location))}` : ""}
       </Text>
+      {seen !== null ? (
+        <Text color="#fde68a" wrap="truncate-end">
+          {lastSeenText(server, ago(seen))}
+        </Text>
+      ) : server ? (
+        <Text color="#78716c" wrap="truncate-end">
+          on <Text color="#a8a29e">{serverLabel(server)}</Text> ({serverHost(server.host, server.origin)}
+          {server.mode === "watch" ? ", watching" : ""}
+          {accessLabel(server) !== "open" ? `, ${accessLabel(server)}` : ""})
+        </Text>
+      ) : null}
       <FlameView rows={flameRows} strength={strengthFor(f.secondsLeft, f.phase)} depth={session.colorDepth} />
       <Text>
         {burning ? (
@@ -117,8 +133,8 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
         {game.blocker("rake", f) === null ? <Text color="#a8a29e">Your logs lie in the ashes. Press R to rake them out.</Text> : null}
         {game.isGuest ? (
           <Text color="#78716c">{game.guestHint}</Text>
-        ) : readOnly ? (
-          <Text color="#78716c">You only watch this fire's server ({hostOf(f.id)}). Switch it to play under Servers to keep it.</Text>
+        ) : reason ? (
+          <Text color="#78716c">{reason}</Text>
         ) : null}
       </Box>
       <Box marginTop={1} flexGrow={1} alignItems="flex-end">

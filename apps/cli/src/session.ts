@@ -1,5 +1,5 @@
 import type { Wallet } from "@beaconsgg/identity";
-import type { DailyLogs, SavedServer, Snapshot } from "@watchfire/core";
+import type { DailyLogs, FireView, SavedServer, Snapshot } from "@watchfire/core";
 
 /**
  * Everything the app needs from where it runs. The local CLI and the SSH door each build one, so
@@ -48,6 +48,8 @@ export interface KeeperState extends DailyLogs {
   raked: string[];
   /** The world as of the last look, for "since your last visit" news. */
   snapshot?: Snapshot;
+  /** The fires as last read, so a server that's down at startup still shows them, as last seen. */
+  known?: FireView[];
   /** The keeper's server list, with pinned keys. Absent until first saved. */
   servers?: SavedServer[];
   /** Set once the player has seen where their key lives. */

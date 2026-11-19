@@ -71,7 +71,7 @@ export async function fileKeeperStore(dir = configDir()): Promise<KeeperStore> {
   const one = serial();
   return {
     load: () => one(async () => ({ ...emptyKeeper(), ...((await readJson<KeeperState>(path)) ?? {}) })),
-    save: (s) => one(() => writePrivate(path, JSON.stringify(s, null, 1))),
+    save: (s) => one(() => writePrivate(path, JSON.stringify(s))),
   };
 }
 

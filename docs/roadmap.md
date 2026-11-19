@@ -25,6 +25,17 @@
 - [x] Fixed: raking a live fire said "That fire has gone out"; text plus Enter in one chunk (fast typing, SSH, paste) didn't submit
 - [ ] Not yet: live map updates for the news while idle (it polls every 30s), publishing to npm (needs a scoped name), raking tested in the UI (the spike covers it on the server)
 
+## Phase 2.5: several servers ✅ (2026-11-19)
+
+- [x] Each fire's server on the Fire screen, the World view (with a filter) and the main list
+- [x] Choose the server when lighting; the most specific coverage is the default; nudges stay in the server's area
+- [x] Members-only servers: membership per server, ask to join with a note, approvals noticed on refresh, moves stopped with the reason
+- [x] Server priority (+/-), latency, and a "server needs a look" notice
+- [x] Local test servers (`pnpm servers:up`), an operator script, and `pnpm spike:servers` (22 checks)
+- [x] A server that stops answering: its fires stay, with "~" times and "last seen …" (also after a cold start, from the saved last-known fires); the game re-checks it every refresh and picks it back up
+- [x] News reports a fire gone only when its own server answered without it (not when a server went quiet, was removed, or changed key)
+- [x] Warning when no server you play on covers your watch place
+
 ## Phase 3: SSH door
 
 - [ ] `apps/door` on `ssh2`, hosting the CLI app per session

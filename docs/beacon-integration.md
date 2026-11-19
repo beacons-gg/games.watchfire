@@ -96,6 +96,27 @@ Fire names, and later mail, are written by other players and shown in terminals.
 - A server that doesn't admit `watchfire-door` stays in the list as `notHosting`. It's still asked for profiles, which is how a name set in another game (say, on a Vestige server) shows up here.
 - **Browse** reads `https://beacons.gg/api/v1/servers?game=watchfire-door`. The directory is only a place to find servers; adding one still verifies its descriptor.
 - `--server <url>` fixes the list for one session without saving it.
+- **Priority:** the list order is the player's priority (+/- on the Servers screen). When two servers cover a place equally well, the higher one gets new fires. Reordering and switching play/watch apply to the open connection at once (`reorder`, `setMode`), with no reconnect.
+- **Latency** comes from `pingServer` on each connect and shows on the Servers screen and the light picker.
+
+## Several servers at once
+
+- **Every fire says where it lives.** The Fire screen shows "on <server> (<host>)" and, if the player can't act there, why. The World view has a Server column and **F** to filter to one server. With more than one readable server, the main screen's nearest-fires list shows each fire's server too.
+- **Choosing where a fire is lit.** `lightTargets(place)` lists the servers that would take a fire at the place: verified, hosting Watchfire, in play mode, a member where membership applies, and covering the point (`serversCovering`). The default comes first: the most specific coverage (`selectCoveringServer`), ties to the higher server in the list. With one target the game skips the question. With none it explains why (outside every play server's area, watched, or not a member). A fire is nudged up to 800 m from the city center only if the nudge stays inside the chosen server's area.
+- **A server needing a look** (not answering, a new key, a request waiting) shows on the main screen: "1 server needs a look (S)".
+- **A server that stops answering** doesn't take its fires with it. They stay listed with estimated times ("~3h12m") and "last seen 5m ago"; the World view shows "not answering"; the Fire screen says so and moves are refused. `mergeLook` marks those fires `stale`, keeping when they were read (`readAt`). The keeper's state keeps the last-known fires (`known`), so this works after a restart too. Every refresh pings a down server (and asks a members-only server about a waiting request) and connects afresh only when something changed (`recheck`), so a server that stays down costs one ping per 30 seconds. A server that goes quiet mid-session shows as "not answering" on the Servers screen. A server whose **key changed** is different: it's untrusted, so its fires are hidden until the player re-adds it.
+- **News** reports a fire "gone from the map" only when its own server answered without it.
+- **Watch place:** if no server the player plays on covers it, the main screen says so, and so does picking the place. While a play server is down this stays quiet (`coverageAt` answers "unknown"), since the down server might cover it.
+
+## Members-only servers (`request` and `private`)
+
+Reads stay open at every access level, so their fires always show. Writes need membership.
+
+- On connect, for each server whose descriptor says `access:members` and whose level isn't `open`, the game asks `fetchAccess`: `member`, `pending`, `declined` or `none`. Only members play there; the Servers screen shows "member", "asked to join", "declined", "members only" or "private".
+- **Asking to join** (Servers → J, `request` servers only) first puts the player's profile on that server, because the operator sees it next to the request. That's the player's newest verified profile as signed, or a bare one (no name) if they have none, so nothing is rebuilt or stripped. Then `requestAccess` with an optional note (up to 280 characters). A `private` server takes no requests; the game says to ask its operator.
+- While a request waits, each 30-second refresh reconnects, which re-checks membership. When the operator answers, the player sees "Members Hall let you in." or "…declined your request." (`membershipChanges` against the saved list).
+- Moves on a fire whose server won't take them are stopped before sending, with the reason (`readOnlyReason`). If the server refuses anyway, `notMember` reads "That server only takes members. Ask to join under Servers (J)." The client declares `code:notMember`, `code:gameNotAccepted`, `code:deviceRevoked` and `code:clockSkew` so servers send those codes.
+- `pnpm spike:servers` checks all of this against `9q72` plus two local servers (`pnpm servers:up`): a `request` one and an open one covering only Edinburgh. 22 checks, all passing, including ask → operator approves (`scripts/local-operator.ts`) → light and feed there.
 
 ## Names and profiles
 

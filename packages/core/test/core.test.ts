@@ -105,7 +105,7 @@ test("fire policy formulas: logs count items, out time follows logs, ember thres
 function fire(over: Partial<FireView> & { id: string }): FireView {
   return {
     name: "Test fire", location: { lat: 0, lng: 0 }, logs: 1, placedAt: 1000, outAt: 1000 + 16 * 3600,
-    phase: "burning", secondsLeft: 0, keepers: ["did:a"], warmth: 0, warmedBy: [], emberHolders: [], raked: [],
+    phase: "burning", secondsLeft: 0, keepers: ["did:a"], warmth: 0, warmedBy: [], emberHolders: [], raked: [], readAt: 0,
     ...over,
   };
 }
@@ -127,6 +127,9 @@ test("newsBetween reports lit, fed, milestones and fires gone dark", async () =>
   const kinds = lines.map((l) => `${l.fireId}:${l.kind}`).sort();
   assert.deepEqual(kinds, ["a:fed", "b:milestone", "c:dark", "d:vanished", "e:lit"]);
   assert.ok(!lines.some((l) => l.text.includes("\x1b")));
+  // A fire missing because its server didn't answer (or was removed) is not news.
+  const quiet = newsBetween(prev, cur, { ...opts, answered: ["elsewhere"] }).map((l) => l.kind);
+  assert.ok(!quiet.includes("vanished"));
 });
 
 test("readFire judges the phase by the clock, not the stored phase", () => {
@@ -204,4 +207,90 @@ test("time helpers", async () => {
   const today = new Date();
   today.setHours(22, 40, 0, 0);
   assert.equal(clock(Math.floor(today.getTime() / 1000), today.getTime()), "22:40");
+});
+
+test("membership: who can play where, who can ask, what changed", async () => {
+  const { canPlayOn, canAskToJoin, accessLabel, membershipChanges, moveServer, readOnlyText } = await import("../src/index.ts");
+  const open = { origin: "https://o", mode: "play" as const, state: "ok" as const, accessLevel: "open", name: "Open" };
+  const req = { ...open, origin: "https://r", accessLevel: "request", name: "Hall" };
+  assert.equal(canPlayOn(open), true);
+  assert.equal(canPlayOn({ ...open, mode: "watch" }), false);
+  assert.equal(canPlayOn({ ...req, access: "member" }), true);
+  assert.equal(canPlayOn({ ...req, access: "pending" }), false);
+  assert.equal(canPlayOn({ ...req, access: "none" }), false);
+  assert.equal(canAskToJoin({ ...req, access: "none" }), true);
+  assert.equal(canAskToJoin({ ...req, access: "declined" }), false);
+  assert.equal(canAskToJoin({ ...req, accessLevel: "private", access: "none" }), false);
+  assert.equal(canAskToJoin(open), false);
+  assert.deepEqual(
+    [open, { ...req, access: "member" }, { ...req, access: "pending" }, { ...req, access: "none" }, { ...req, accessLevel: "private" }].map(accessLabel),
+    ["open", "member", "asked to join", "members only", "private"],
+  );
+  assert.match(readOnlyText({ ...req, access: "pending" }), /asked to join Hall/);
+  assert.match(readOnlyText({ ...req, access: "none" }), /Servers \(J\)/);
+  assert.match(readOnlyText({ ...open, mode: "watch" }), /only watch/);
+  const before = [{ origin: "https://r", mode: "play" as const, access: "pending" as const }];
+  assert.deepEqual(membershipChanges(before, [{ ...req, access: "member" }]).map((s) => s.access), ["member"]);
+  assert.deepEqual(membershipChanges(before, [{ ...req, access: "pending" }]), []);
+  const list = [{ origin: "a", mode: "play" as const }, { origin: "b", mode: "play" as const }];
+  assert.deepEqual(moveServer(list, "b", -1).map((s) => s.origin), ["b", "a"]);
+  assert.equal(moveServer(list, "a", -1), list, "already at the top");
+});
+
+test("news holds still for servers that didn't answer, then catches up", async () => {
+  const { carryUnheard, snapshotOf, newsBetween } = await import("../src/index.ts");
+  const opts = { emberAt: 5, capacity: 12 };
+  const prev = snapshotOf([fire({ id: "x@down", outAt: 9000 })], 1000);
+  // While its server is quiet, the fire's clock runs out locally: no "went dark" yet.
+  const aged = snapshotOf([fire({ id: "x@down", outAt: 9000, phase: "ash" })], 10_000);
+  const held = carryUnheard(prev, aged, ["up"]);
+  assert.equal(held.fires["x@down"]!.phase, "burning");
+  assert.deepEqual(newsBetween(prev, held, { ...opts, answered: ["up"] }), []);
+  // Heard again, and it really is dark: now it's news.
+  const heard = snapshotOf([fire({ id: "x@down", outAt: 9000, phase: "ash" })], 11_000);
+  assert.deepEqual(newsBetween(held, heard, { ...opts, answered: ["down"] }).map((l) => l.kind), ["dark"]);
+});
+
+test("membership memory and wording", async () => {
+  const { pinStatuses, joinBlockedText, membershipChangeText, refusalText } = await import("../src/index.ts");
+  const saved = [{ origin: "https://r", mode: "play" as const, access: "pending" as const }];
+  // The server was down, so this check couldn't ask: remember "pending".
+  assert.equal(pinStatuses(saved, [{ origin: "https://r", mode: "play", state: "unreachable" }])[0]!.access, "pending");
+  // The server is open now: forget it.
+  assert.equal(pinStatuses(saved, [{ origin: "https://r", mode: "play", state: "ok", accessLevel: "open" }])[0]!.access, undefined);
+  const hall = { origin: "https://r", name: "Hall" };
+  assert.match(joinBlockedText({ ...hall, accessLevel: "private" }), /takes no requests/);
+  assert.match(joinBlockedText({ ...hall, accessLevel: "request", access: "pending" }), /already asked/);
+  assert.match(joinBlockedText({ ...hall, accessLevel: "open" }), /open/);
+  assert.equal(membershipChangeText({ ...hall, access: "member" }), "Hall let you in.");
+  assert.doesNotMatch(refusalText("gameNotAccepted"), /gameNotAccepted/);
+});
+
+test("server predicates, labels, join rules and error wording", async () => {
+  const { serverLabel, isDown, needsRecheck, needsLook, downHosts, joinBlocker, moveErrorText, uncoveredText, lastSeenText, mergeLook } =
+    await import("../src/index.ts");
+  const ok = { origin: "https://a.example", mode: "play" as const, state: "ok" as const, host: "a.example", name: "A" };
+  assert.equal(serverLabel(ok), "A");
+  assert.equal(serverLabel({ origin: "https://b.example", host: "b.example" }), "b.example");
+  assert.equal(serverLabel({ origin: "https://c.example" }), "https://c.example");
+  const down = { ...ok, state: "unreachable" as const };
+  const pending = { ...ok, accessLevel: "request", access: "pending" as const };
+  assert.deepEqual([isDown(down), needsRecheck(down), needsLook(down)], [true, true, true]);
+  assert.deepEqual([isDown(pending), needsRecheck(pending), needsLook(pending)], [false, true, true]);
+  assert.deepEqual([isDown({ ...ok, state: "keyChanged" }), needsRecheck({ ...ok, state: "keyChanged" })], [true, false]);
+  assert.deepEqual(downHosts([ok, down, { ...down, host: undefined }]), ["a.example"]);
+  const hint = { guest: false, guestHint: "guests watch" };
+  assert.equal(joinBlocker({ ...ok, accessLevel: "request", access: "none" }, hint), null);
+  assert.equal(joinBlocker({ ...ok, accessLevel: "request", access: "none" }, { ...hint, guest: true }), "guests watch");
+  assert.match(joinBlocker({ ...ok, accessLevel: "open" }, hint)!, /open/);
+  assert.match(moveErrorText(Object.assign(new Error("You only watch it."), { code: "readOnly" })), /^You only watch it\.$/);
+  assert.equal(moveErrorText({ code: "phase" }), "That fire has gone out.");
+  assert.match(moveErrorText(new Error("boom")), /sputters: boom/);
+  assert.match(uncoveredText("Paris"), /covers Paris/);
+  assert.match(lastSeenText(ok, "5m ago"), /^A isn't answering\. Last seen 5m ago/);
+  const kept = mergeLook([fire({ id: "x@a.example", readAt: 100 })], { fires: [], failedHosts: ["a.example"] }, 200);
+  assert.equal(kept[0]!.stale, true);
+  assert.equal(kept[0]!.readAt, 100, "last seen stays when it was read");
+  const fresh = mergeLook(kept, { fires: [fire({ id: "x@a.example", readAt: 300 })], failedHosts: [] }, 300);
+  assert.equal(fresh[0]!.stale, undefined, "heard again: no longer stale");
 });

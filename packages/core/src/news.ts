@@ -1,4 +1,4 @@
-import type { FireView } from "./fire.ts";
+import { hostOf, type FireView } from "./fire.ts";
 import { formatDuration, nowSec } from "./time.ts";
 import { keeperName } from "./names.ts";
 import { safeText } from "./text.ts";
@@ -26,6 +26,19 @@ export interface NewsLine {
   text: string;
 }
 
+/**
+ * The snapshot for a look in which some servers didn't answer: their fires keep the entries from
+ * the previous snapshot, so nothing is reported about them until their server is heard again.
+ */
+export function carryUnheard(prev: Snapshot | null, cur: Snapshot, answered: readonly string[]): Snapshot {
+  if (!prev) return cur;
+  const fires = { ...cur.fires };
+  for (const id of Object.keys(fires)) {
+    if (!answered.includes(hostOf(id)) && prev.fires[id]) fires[id] = prev.fires[id]!;
+  }
+  return { ...cur, fires };
+}
+
 export function snapshotOf(fires: FireView[], at = nowSec()): Snapshot {
   const out: Snapshot = { at, fires: {} };
   for (const f of fires) {
@@ -49,7 +62,17 @@ export function snapshotOf(fires: FireView[], at = nowSec()): Snapshot {
 export function newsBetween(
   prev: Snapshot | null,
   cur: Snapshot,
-  opts: { emberAt: number; capacity: number; me?: string | null; nameOf?: (did?: string) => string },
+  opts: {
+    emberAt: number;
+    capacity: number;
+    me?: string | null;
+    nameOf?: (did?: string) => string;
+    /**
+     * Hosts that answered this look. A fire is reported gone only when its own server answered
+     * without it, not when the server was removed, went quiet, or changed its key.
+     */
+    answered?: readonly string[];
+  },
 ): NewsLine[] {
   const who = (did?: string) => (did && did === opts.me ? "You" : (opts.nameOf ?? keeperName)(did));
   const lines: NewsLine[] = [];
@@ -83,7 +106,7 @@ export function newsBetween(
   }
   if (prev) {
     for (const [id, f] of Object.entries(prev.fires)) {
-      if (!cur.fires[id] && f.phase === "burning") {
+      if (!cur.fires[id] && f.phase === "burning" && (!opts.answered || opts.answered.includes(hostOf(id)))) {
         lines.push({ at: cur.at, fireId: id, kind: "vanished", text: `${f.name} is gone from the map.` });
       }
     }

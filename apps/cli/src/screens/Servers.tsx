@@ -1,12 +1,26 @@
 import { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { serverHost } from "@beaconsgg/client-sdk";
-import { coverageLabel, directoryServers, hostOf, safeText, type DirectoryServer, type ServerStatus } from "@watchfire/core";
+import {
+  accessLabel,
+  coverageLabel,
+  directoryServers,
+  hostOf,
+  joinBlocker,
+  serverLabel,
+  safeText,
+  type DirectoryServer,
+  type ServerStatus,
+} from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { cell, Frame, grow, Keys, Message, pointer, stepCursor, TextInput, useSize } from "../ui.tsx";
 
-type Mode = { kind: "list" } | { kind: "add" } | { kind: "browse"; list: DirectoryServer[] | null; error?: string };
+type Mode =
+  | { kind: "list" }
+  | { kind: "add" }
+  | { kind: "join"; server: ServerStatus }
+  | { kind: "browse"; list: DirectoryServer[] | null; error?: string };
 
 const STATE: Record<ServerStatus["state"], [string, string, string]> = {
   ok: ["●", "#fbbf24", ""],
@@ -55,6 +69,17 @@ export function Servers(props: { game: Game; session: Session; back(): void }) {
       if (k === "a") return setMode({ kind: "add" });
       if (k === "b") return browse();
       if (!cur) return;
+      if (k === "j") {
+        const why = joinBlocker(cur, { guest: game.isGuest, guestHint: game.guestHint });
+        return why ? game.setMessage(why) : setMode({ kind: "join", server: cur });
+      }
+      if (input === "+" || input === "-") {
+        const i = list.indexOf(cur);
+        const dir = input === "+" ? -1 : 1;
+        if (i + dir < 0 || i + dir >= list.length) return;
+        setSel(i + dir);
+        return void game.moveServer(cur.origin, dir);
+      }
       if (k === "m" || input === " ") {
         setConfirm(null);
         return void game.setServerMode(cur.origin, cur.mode === "play" ? "watch" : "play");
@@ -69,11 +94,11 @@ export function Servers(props: { game: Game; session: Session; back(): void }) {
         return game.setMessage(`Press D again to remove ${cur.name ?? cur.origin}.`);
       }
     },
-    { isActive: mode.kind !== "add" },
+    { isActive: mode.kind !== "add" && mode.kind !== "join" },
   );
 
-  const nameW = grow(22, width, 0.3, 40);
-  const hostW = grow(20, width, 0.3, 40);
+  const nameW = grow(18, width, 0.25, 40);
+  const hostW = grow(16, width, 0.25, 40);
   const added = new Set(list.map((s) => s.origin));
 
   if (mode.kind === "browse") {
@@ -103,14 +128,16 @@ export function Servers(props: { game: Game; session: Session; back(): void }) {
       node={session.node}
       title="SERVERS"
       footer={
-        mode.kind === "add" ? (
-          <Text color="#78716c">Enter to add · Esc to cancel</Text>
+        mode.kind === "add" || mode.kind === "join" ? (
+          <Text color="#78716c">Enter to {mode.kind === "add" ? "add" : "send"} · Esc to cancel</Text>
         ) : (
           <Keys
             keys={[
               ["↑↓", " choose"],
               ["M", "ode play/watch", fixed || !cur],
               ["D", "elete", fixed || !cur],
+              ["J", "oin", fixed || !cur || joinBlocker(cur, { guest: game.isGuest, guestHint: game.guestHint }) !== null],
+              ["+/-", " priority", fixed || list.length < 2],
               ["A", "dd", fixed],
               ["B", "rowse", fixed],
               ["Esc", " back"],
@@ -121,24 +148,28 @@ export function Servers(props: { game: Game; session: Session; back(): void }) {
     >
       <Text color="#a8a29e" wrap="wrap">
         Fires come from every server here. You light and feed fires only on servers you <Text color="#fbbf24">play</Text>; the
-        ones you <Text color="#fde68a">watch</Text> you only see.
+        ones you <Text color="#fde68a">watch</Text> you only see. When two servers cover a place equally, the higher one gets
+        your new fires.
       </Text>
       {fixed ? <Text color="#fde68a">This session's servers were set with --server, so changes are off.</Text> : null}
       <Box marginTop={1} flexDirection="column" flexGrow={1}>
         {list.length === 0 ? <Text color="#78716c">No servers. Press A to add one by address, or B to browse the directory.</Text> : null}
         {list.map((s, i) => {
-          const [icon, color, note] = STATE[s.state];
+          const [icon, color, note] = STATE[s.state === "ok" && game.isQuiet(s) ? "unreachable" : s.state];
           return (
             <Text key={s.origin} wrap="truncate-end" color={i === sel ? "#fbbf24" : undefined}>
               {pointer(i === sel)}
-              <Text color={color}>{icon}</Text> {cell(s.name ?? s.host ?? s.origin, nameW)} {cell(serverHost(s.host, s.origin), hostW)}{" "}
+              <Text color={color}>{icon}</Text> {cell(serverLabel(s), nameW)} {cell(serverHost(s.host, s.origin), hostW)}{" "}
               <Text color={s.mode === "play" ? "#fbbf24" : "#fde68a"}>{cell(s.mode, 6)}</Text>
               {note ? (
                 <Text color={color}>{note}</Text>
               ) : (
-                <Text color="#a8a29e">
-                  {cell(coverageLabel(s.coverage), 10)} {firesOn(s.host)} burning
-                </Text>
+                <>
+                  <Text color={s.access === "member" || !s.access ? "#a8a29e" : "#fde68a"}>{cell(accessLabel(s), 14)}</Text>
+                  <Text color="#a8a29e">
+                    {cell(coverageLabel(s.coverage), 10)} {firesOn(s.host)} burning
+                  </Text>
+                </>
               )}
             </Text>
           );
@@ -154,9 +185,26 @@ export function Servers(props: { game: Game; session: Session; back(): void }) {
             if (await game.addServer(addr, "play")) setMode({ kind: "list" });
           }}
         />
-      ) : cur?.description ? (
+      ) : mode.kind === "join" ? (
+        <Box flexDirection="column">
+          <Text color="#a8a29e">
+            Asking to join {serverLabel(mode.server)}. Its operator sees your profile and this note.
+          </Text>
+          <TextInput
+            label="Note (optional):"
+            max={280}
+            onCancel={() => setMode({ kind: "list" })}
+            onSubmit={async (note) => {
+              setMode({ kind: "list" });
+              await game.requestJoin(mode.server.origin, note.trim() || undefined);
+            }}
+          />
+        </Box>
+      ) : cur && cur.state !== "unreachable" ? (
         <Text color="#78716c" wrap="truncate-end">
-          {cur.name}: {cur.description} · {cur.accessLevel} · v{cur.version}
+          {cur.name}
+          {cur.description ? `: ${cur.description}` : ""} · {cur.accessLevel ?? "open"} · v{cur.version}
+          {cur.ms != null ? ` · ${cur.ms} ms` : ""}
         </Text>
       ) : null}
       <Message text={game.message} busy={game.busy} />

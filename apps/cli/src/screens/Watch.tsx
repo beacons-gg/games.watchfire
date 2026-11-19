@@ -1,5 +1,5 @@
 import { Box, Text } from "ink";
-import { LOGS_PER_DAY } from "@watchfire/core";
+import { LOGS_PER_DAY, uncoveredText } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session, WatchPlace } from "../session.ts";
 import { FlameView, Frame } from "../ui.tsx";
@@ -26,6 +26,9 @@ export function Watch(props: { game: Game; session: Session; firstRun: boolean; 
           onPick={async (p) => {
             await game.setWatch(p);
             props.done(p);
+            if (game.uncovered(p)) {
+              game.setMessage(`${uncoveredText(p.name)} You can still keep watch from there.`);
+            }
           }}
           onCancel={() => props.done()}
         />

@@ -4,6 +4,12 @@ import { safeText } from "./text.ts";
 
 export const MAX_NAME = 24;
 
+/** This device as a profile lists it. */
+const thisDevice = (wallet: Wallet) => ({ did: wallet.device.did, auth: wallet.auth });
+
+/** A profile with nothing but this device: for a player who has never published one. */
+export const bareProfile = (wallet: Wallet) => buildProfile(wallet.account, { devices: [thisDevice(wallet)] });
+
 export interface NameResult {
   ok: boolean;
   /** Servers that took the new profile. */
@@ -41,7 +47,7 @@ export async function publishDisplayName(
     did: d.key,
     auth: { authorizes: d.key, account: current!.id, ...d.auth },
   }));
-  if (!devices.some((d) => d.did === wallet.device.did)) devices.push({ did: wallet.device.did, auth: wallet.auth });
+  if (!devices.some((d) => d.did === wallet.device.did)) devices.push(thisDevice(wallet));
   const profile = buildProfile(wallet.account, {
     version: (current?.version ?? 0) + 1,
     displayName,

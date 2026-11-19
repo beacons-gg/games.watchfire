@@ -4,13 +4,9 @@
 
 import { authorizeDevice, buildProfile, createDevice, createWallet } from "@beaconsgg/identity";
 import { connect } from "@watchfire/core";
+import { expect, finish } from "./spike-kit.ts";
 
 const SERVER = process.env.BEACON ?? "https://9q72.beacons.gg";
-let failures = 0;
-const expect = (what: string, cond: boolean, detail = "") => {
-  console.log(`${cond ? "PASS" : "FAIL"}  ${what}${detail ? `  (${detail})` : ""}`);
-  if (!cond) failures++;
-};
 
 const wf = await connect({ servers: [SERVER] });
 const origin = wf.servers[0]!.origin;
@@ -43,5 +39,4 @@ expect("this device added", !!after?.devices.some((d) => d.key === player.device
 const none = await wf.displayName(createWallet().account.did);
 expect("a player with no profile has no display name", none === null);
 
-console.log(failures === 0 ? "all checks passed" : `${failures} check(s) failed`);
-process.exit(failures === 0 ? 0 : 1);
+finish();

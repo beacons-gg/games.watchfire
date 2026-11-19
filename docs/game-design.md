@@ -70,7 +70,9 @@ Fire names come from the lighter ("The Lantern on Calton Hill"), defaulting to "
 - **World:** fires grouped by region, sorted by time left. "Dying fires" first.
 - **News:** the log of what happened since your last visit.
 - **You:** your name (your Beacon profile name, or your keeper name until you set one), your record, and your embers: one per fire you tended past 5 logs. The long-term "score."
-- **Servers:** the Beacon servers you read fires from, which ones you play on and which you only watch, adding servers by address or from the beacons.gg directory.
+- **Servers:** the Beacon servers you read fires from; play or watch each; membership on members-only servers, with J to ask to join; +/- priority; latency; add by address or from the beacons.gg directory.
+- **Light** asks which server holds the new fire when more than one of yours covers the place, defaulting to the one that covers it most closely.
+- **World** shows each fire's server, and F filters to one server.
 - **Ashes:** fires you tended that went dark, with how long they burned.
 
 Keyboard only, with single-key shortcuts as in door games. Every screen works at 80×24 and grows to fill a bigger terminal.

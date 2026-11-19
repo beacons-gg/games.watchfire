@@ -72,10 +72,13 @@ export function BurnBar(props: { secondsLeft: number; ash?: boolean; width?: num
   );
 }
 
-/** Time left, red when urgent, "dark" for ash. `pad` makes it a fixed-width table cell. */
-export function TimeLeft(props: { secondsLeft: number; ash?: boolean; pad?: number }) {
-  const text = props.ash ? "dark" : formatDuration(props.secondsLeft);
-  const color = props.ash ? "#78716c" : props.secondsLeft < URGENT_SEC ? "#ef4444" : undefined;
+/**
+ * Time left, red when urgent, "dark" for ash. `stale` (its server isn't answering) marks it as an
+ * estimate: "~3h12m", dimmed. `pad` makes it a fixed-width table cell.
+ */
+export function TimeLeft(props: { secondsLeft: number; ash?: boolean; stale?: boolean; pad?: number }) {
+  const text = (props.stale ? "~" : "") + (props.ash ? "dark" : formatDuration(props.secondsLeft));
+  const color = props.ash || props.stale ? "#78716c" : props.secondsLeft < URGENT_SEC ? "#ef4444" : undefined;
   return <Text color={color}>{props.pad ? cell(text, props.pad) : text}</Text>;
 }
 
@@ -108,7 +111,7 @@ export function FlameView(props: { rows: number; strength: number; depth: 8 | 24
   );
 }
 
-/** A one-line text input: type, Backspace, Enter to submit, Esc to cancel. */
+/** A one-line text input: type, Backspace, Ctrl+U to clear, Enter to submit, Esc to cancel. */
 export function TextInput(props: {
   label: string;
   initial?: string;
@@ -130,6 +133,8 @@ export function TextInput(props: {
     if (key.escape) return props.onCancel();
     if (key.return) return props.onSubmit(valueRef.current);
     if (key.backspace || key.delete) return set(valueRef.current.slice(0, -1));
+    // Ctrl+U clears the line, as in a shell: handy for replacing a suggested name.
+    if (key.ctrl && input === "u") return set("");
     if (key.ctrl || key.meta || key.tab || key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) return;
     // Typing fast (or over SSH), or pasting a line, can bring the text and the Enter in one chunk.
     const nl = input.search(/[\r\n]/);

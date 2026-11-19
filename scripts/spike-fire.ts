@@ -10,18 +10,13 @@
 import { createWallet } from "@beaconsgg/identity";
 import { encode } from "@beaconsgg/geo";
 import { connect, mintItem, mintLog, SPIKE_TUNING, type FireView } from "@watchfire/core";
+import { expect, finish, SPIKE_TYPE as TYPE } from "./spike-kit.ts";
 
 const SERVER = process.env.BEACON ?? "https://9q72.beacons.gg";
-const TYPE = "watchfire-spike";
 const T = SPIKE_TUNING;
 
 const log = (...a: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-let failures = 0;
-const expect = (what: string, cond: boolean, detail = "") => {
-  log(`${cond ? "PASS" : "FAIL"}  ${what}${detail ? `  (${detail})` : ""}`);
-  if (!cond) failures++;
-};
 
 const wf = await connect({ servers: [SERVER], type: TYPE, tuning: T });
 const d = wf.servers[0]!.descriptor!;
@@ -106,5 +101,4 @@ log(`      alex rakes again: ${rake2.ok ? "ok" : rake2.error}`);
 
 log(`live deltas seen: ${deltas.length} [${deltas.join(", ")}]`);
 sock.disconnect();
-log(failures === 0 ? "all checks passed" : `${failures} check(s) failed`);
-process.exit(failures === 0 ? 0 : 1);
+finish();
