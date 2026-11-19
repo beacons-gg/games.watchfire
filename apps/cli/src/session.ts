@@ -1,5 +1,6 @@
 import type { Wallet } from "@beaconsgg/identity";
 import type { DailyLogs, FireView, SavedServer, Snapshot } from "@watchfire/core";
+import type { ScreenName } from "./app.tsx";
 
 /**
  * Everything the app needs from where it runs. The local CLI and the SSH door each build one, so
@@ -26,6 +27,33 @@ export interface Session {
   guestHint?: string;
   /** Room type to play; tests and spikes use their own. */
   fireType?: string;
+  /** The fetch Beacon requests go through (the SSH door paces writes for all its players). */
+  fetch?: typeof fetch;
+  /** The SSH door's extras. Absent when playing locally. */
+  door?: Door;
+}
+
+/** What the SSH door adds to a session. */
+export interface Door {
+  /** Who's connected right now. */
+  online(): OnlineNode[];
+  /** The screen this player just opened, for who's online. */
+  onScreen(screen: ScreenName): void;
+  /** The sysop's announcement, shown when the player arrives. */
+  motd?: string;
+  /** Keepers only: their recovery phrase, so they can take their keeper home. */
+  revealPhrase?(): Promise<string | null>;
+}
+
+/** One connected door session, for who's online. */
+export interface OnlineNode {
+  node: number;
+  /** The keeper's name, or "a guest". */
+  name: string;
+  /** "at a fire", "surveying the world"… */
+  activity: string;
+  /** Epoch ms when they connected. */
+  since: number;
 }
 
 export interface WatchPlace {

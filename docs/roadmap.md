@@ -36,14 +36,18 @@
 - [x] News reports a fire gone only when its own server answered without it (not when a server went quiet, was removed, or changed key)
 - [x] Warning when no server you play on covers your watch place
 
-## Phase 3: SSH door
+## Phase 3: SSH door ✅ (2026-11-19, built and tested locally)
 
-- [ ] `apps/door` on `ssh2`, hosting the CLI app per session
-- [ ] Share work across sessions in the one door process: one world poller per server list (today each session reads every fire every 30s), and one name cache. The 2026-11-19 review flagged both.
-- [ ] Custodial wallets per key fingerprint, encrypted at rest; watch-only guests
-- [ ] Write queue for the shared per-address budget
-- [ ] Who's online, page a node, sysop announcements
-- [ ] Session limits, idle timeout, ban list, containerized deploy
+- [x] `apps/door` on `ssh2`, running the CLI app per session (`pnpm door`, `ssh -p 2222 localhost`)
+- [x] Custodial keepers per SSH key, recovery phrases sealed with AES-256-GCM under a master key; watch-only guests without a key
+- [x] Take your keeper home (You → K shows the phrase for `watchfire import`)
+- [x] One paced write budget per server for the whole door
+- [x] Who's online, sysop announcements (`motd.txt`)
+- [x] Limits: sessions in total and per address, idle timeout, session length; no shell, exec, SFTP or forwarding
+- [x] Tested over real ssh: keeper and guest at once, light and feed through the door, quit, Ctrl+C, hangup, idle, the same key returning as the same keeper; refusals of exec, SFTP and both forwards
+- [ ] Deploy: container image, host, domain; master key in a KMS
+- [ ] Share work across sessions: one world poller per server list, one name cache
+- [ ] Page a node; ban list
 
 ## Phase 4: dashboard
 

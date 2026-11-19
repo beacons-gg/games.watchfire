@@ -16,6 +16,7 @@ pnpm play             # the game, on 9q72.beacons.gg: this is real play, everyon
 # Don't hand this to playtesters, or their fires won't show up for anyone else.
 WATCHFIRE_FIRE_TYPE=watchfire-dev pnpm play
 pnpm build            # apps/cli/dist/watchfire.mjs, one self-contained file
+pnpm door             # the SSH door on :2222; then: ssh -p 2222 localhost
 pnpm spike            # play one fire, lit to ash, on 9q72.beacons.gg (about a minute)
 pnpm spike:profile    # set a name from Watchfire and check the rest of the profile survives
 

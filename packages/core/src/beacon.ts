@@ -104,6 +104,8 @@ export interface ConnectOptions {
   /** Room type to play with. Spikes and tests pass their own so they stay out of real play. */
   type?: string;
   tuning?: FireTuning;
+  /** The fetch the client uses. The SSH door passes one that paces writes across all its players. */
+  fetch?: typeof fetch;
 }
 
 /** Every precision-1 geohash cell: the whole world in one discovery read. */
@@ -162,7 +164,12 @@ async function inspect(
 export async function connect(opts: ConnectOptions): Promise<Watchfire> {
   const type = opts.type ?? FIRE_TYPE;
   const tuning = opts.tuning ?? FIRE_TUNING;
-  const client = createClient({ connect: io, game: GAME_SLUG, understands: UNDERSTANDS });
+  const client = createClient({
+    connect: io,
+    game: GAME_SLUG,
+    understands: UNDERSTANDS,
+    ...(opts.fetch ? { fetch: opts.fetch as never } : {}),
+  });
 
   const found = await Promise.all(asSaved(opts.servers).map((s) => inspect(client, s, { wallet: opts.wallet, ping: true })));
   // The statuses change in place (join, reorder, mode) and everything below is derived from them,

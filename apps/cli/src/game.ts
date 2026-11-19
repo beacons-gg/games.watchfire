@@ -257,6 +257,7 @@ export function useGame(session: Session): Game {
         servers: serversFixed ? asSaved(session.fixedServers!) : savedServers(),
         wallet: session.wallet,
         ...(session.fireType ? { type: session.fireType } : {}),
+        ...(session.fetch ? { fetch: session.fetch } : {}),
       });
       if (gen !== connectGen.current) return; // a newer connect (e.g. the list changed) supersedes this one
       wf.current = conn;

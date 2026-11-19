@@ -6,7 +6,7 @@
 watchfire/
   packages/core       @watchfire/core: tuning, fire policy, items, readFire, connect()   [built]
   apps/cli            the door game UI (Ink), run locally or inside the SSH door        [built]
-  apps/door           the SSH server that hosts apps/cli per session                    [phase 3]
+  apps/door           the SSH server that hosts apps/cli per session                    [built]
   apps/dashboard      static read-only site: world map, dying fires, news               [phase 4]
   scripts/            spikes and tools
   docs/
@@ -44,7 +44,7 @@ Also: `newsBetween`/`snapshotOf` (the news), `safeText`/`stripControls` (player 
 - **Layout** fills the terminal (`useSize`): never below 80×24, and wider or taller windows grow the flame, the name columns and the lists. It follows resizes.
 - `src/app.tsx` routes between screens (main, fire, world, light, news, you, servers, help, watch place); `src/game.ts` (`useGame`) holds the connection, the world, the keeper's state, the news and every move; `src/screens/*` are the screens; `src/ui.tsx` holds the frame, burn bars, text input and flame view.
 - **The flame** (`src/flame.ts`) is the doom-fire spread on half-block pixels, one precomputed ANSI string per row. Truecolor when `COLORTERM` says so, else xterm-256. Its strength follows the fire, so a dying fire burns low and ash draws nothing.
-- **The `Session` seam** (`src/session.ts`): wallet (or `null` for a guest), keeper store, servers, node number, color depth, the keeper's "today", and the guest hint. The local CLI builds one in `main.tsx`; the door will build one per SSH session.
+- **The `Session` seam** (`src/session.ts`): wallet (or `null` for a guest), keeper store, servers, node number, color depth, the keeper's "today", and the guest hint. The local CLI builds one in `main.tsx`; the door builds one per SSH session and adds its extras under one optional `door` object (who's online, the screen a player is on, the motd, the recovery phrase), so the shared screens check one thing and the door's wording stays in `apps/door`.
 - **Local state** in `~/.config/watchfire/` (`WATCHFIRE_HOME` overrides), owner-only: `keeper-key.json` (the SDK's wallet entry, with the recovery phrase) and `state.json` (watch place, logs today, embers, raked, last snapshot, and the server list with modes and pinned keys).
 - **Commands:** `watchfire`, `watchfire phrase`, `watchfire import`, `--server <url>` (fixes the list for one session, unsaved), `--watch-only`, `--help`, `--version`.
 - **Dev switches:** `WATCHFIRE_FIRE_TYPE=watchfire-dev` plays with a separate room type so test fires never mix with real ones; `WATCHFIRE_SERVERS` overrides the server list.
@@ -54,7 +54,7 @@ Also: `newsBetween`/`snapshotOf` (the news), `safeText`/`stripControls` (player 
 
 ## SSH door (`apps/door`)
 
-See [ssh-door.md](ssh-door.md).
+An `ssh2` server that renders the CLI's Ink app (`watchfire/app`, exported by `apps/cli` for the workspace) into each SSH channel, with a `Session` per player: a custodial keeper (or a guest), a shared paced `fetch`, a UTC day, and its `door` extras (`online`, `onScreen`, `motd`, `revealPhrase`). See [ssh-door.md](ssh-door.md).
 
 ## Dashboard (`apps/dashboard`)
 

@@ -32,13 +32,22 @@ async function writePrivate(path: string, data: string): Promise<void> {
 
 /**
  * Run read-modify-write steps on one file one at a time, so overlapping saves (a refresh and a
- * move, say) can't interleave or lose each other's changes.
+ * move, say) can't interleave or lose each other's changes. One queue per file for the whole
+ * process.
  */
-function serial() {
-  let tail: Promise<unknown> = Promise.resolve();
+const queues = new Map<string, Promise<unknown>>();
+function serial(path: string) {
   return <T>(step: () => Promise<T>): Promise<T> => {
-    const run = tail.then(step, step);
-    tail = run.catch(() => {});
+    const run = (queues.get(path) ?? Promise.resolve()).then(step, step);
+    const tail = run.then(
+      () => {},
+      () => {},
+    );
+    queues.set(path, tail);
+    // Forget an idle file's queue, so a door that sees many keepers doesn't keep one each.
+    void tail.then(() => {
+      if (queues.get(path) === tail) queues.delete(path);
+    });
     return run;
   };
 }
@@ -52,7 +61,7 @@ export async function fileKeyStore(dir = configDir()): Promise<SecureKeyStore> {
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const path = join(dir, "keeper-key.json");
   const all = async () => (await readJson<Record<string, string>>(path)) ?? {};
-  const one = serial();
+  const one = serial(path);
   return {
     getItem: (k) => one(async () => (await all())[k] ?? null),
     setItem: (k, v) => one(async () => writePrivate(path, JSON.stringify({ ...(await all()), [k]: v }))),
@@ -68,16 +77,20 @@ export async function fileKeyStore(dir = configDir()): Promise<SecureKeyStore> {
 export async function fileKeeperStore(dir = configDir()): Promise<KeeperStore> {
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const path = join(dir, "state.json");
-  const one = serial();
+  const one = serial(path);
   return {
     load: () => one(async () => ({ ...emptyKeeper(), ...((await readJson<KeeperState>(path)) ?? {}) })),
     save: (s) => one(() => writePrivate(path, JSON.stringify(s))),
   };
 }
 
-export function detectColorDepth(env = process.env): 8 | 24 {
+/**
+ * Truecolor when the terminal says so (COLORTERM) or is known for it; otherwise 256 colors, which
+ * every terminal of the last twenty years draws. The door asks with what the player's ssh sent.
+ */
+export function detectColorDepth(env: Record<string, string | undefined> = process.env): 8 | 24 {
   const ct = (env.COLORTERM ?? "").toLowerCase();
   if (ct === "truecolor" || ct === "24bit") return 24;
-  if (env.TERM_PROGRAM === "iTerm.app" || env.TERM_PROGRAM === "WezTerm" || env.TERM === "xterm-kitty") return 24;
-  return 8;
+  if (env.TERM_PROGRAM === "iTerm.app" || env.TERM_PROGRAM === "WezTerm") return 24;
+  return /truecolor|direct|kitty|ghostty|alacritty|wezterm|foot/i.test(env.TERM ?? "") ? 24 : 8;
 }

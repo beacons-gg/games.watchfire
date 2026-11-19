@@ -4,3 +4,4 @@ dist/
 *.log
 .watchfire/
 .watchfire-dev/
+.watchfire-door/

@@ -4,7 +4,7 @@ import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { BurnBar, cell, FlameView, Frame, grow, Keys, Message, TimeLeft, useSize } from "../ui.tsx";
 
-type MainGo = "world" | "light" | "news" | "you" | "help" | "watch" | "servers";
+type MainGo = "world" | "light" | "news" | "you" | "help" | "watch" | "servers" | "online";
 
 export function Main(props: { game: Game; session: Session; go(screen: MainGo): void; open(fireId: string): void; quit(): void }) {
   const { game, session } = props;
@@ -35,6 +35,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
     if (k === "n") return props.go("news");
     if (k === "y" || k === "e") return props.go("you");
     if (k === "s") return props.go("servers");
+    if (k === "o" && session.door) return props.go("online");
     if (k === "p") return props.go("watch");
     if (k === "?" || k === "h") return props.go("help");
     if (k === "r") return void game.refresh();
@@ -60,6 +61,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
             ["N", "ews"],
             ["Y", "ou"],
             ["S", "ervers"],
+            ...(session.door ? [["O", "nline"] as [string, string]] : []),
             ["P", "lace"],
             ["?", "help"],
             ["Q", "uit"],

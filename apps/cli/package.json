@@ -25,5 +25,11 @@
     "ink": "8.0.0",
     "react": "19.3.1",
     "tsx": "4.23.15"
+  },
+  "exports": {
+    "./app": "./src/app.tsx",
+    "./session": "./src/session.ts",
+    "./local": "./src/local.ts",
+    "./ui": "./src/ui.tsx"
   }
 }

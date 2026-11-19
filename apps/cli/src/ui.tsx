@@ -22,6 +22,9 @@ export function grow(base: number, width: number, share: number, max = Infinity)
   return Math.min(max, base + Math.floor(Math.max(0, width - MIN_WIDTH) * share));
 }
 
+/** A node number as a BBS shows it: "07". */
+export const nodeLabel = (n: number) => String(n).padStart(2, "0");
+
 /** The door's frame: a double border, the title, and the node number. Fills the terminal. */
 export function Frame(props: { title?: string; node: number; children: ReactNode; footer?: ReactNode }) {
   const { width, height } = useSize();
@@ -31,7 +34,7 @@ export function Frame(props: { title?: string; node: number; children: ReactNode
         <Text color="#fb923c" bold>
           {props.title ?? "W A T C H F I R E"}
         </Text>
-        <Text color="#78716c">node {String(props.node).padStart(2, "0")}</Text>
+        <Text color="#78716c">node {nodeLabel(props.node)}</Text>
       </Box>
       <Box flexDirection="column" flexGrow={1}>
         {props.children}

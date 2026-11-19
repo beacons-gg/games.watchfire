@@ -3,3 +3,6 @@ packages:
   - "apps/*"
 allowBuilds:
   esbuild: true
+  # ssh2 runs without its optional native crypto add-on.
+  ssh2: false
+  cpu-features: false

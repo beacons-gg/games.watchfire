@@ -10,17 +10,68 @@ export function You(props: { game: Game; session: Session; back(): void }) {
   const { game, session } = props;
   const { height } = useSize();
   const [naming, setNaming] = useState(false);
+  // Door only: "take your keeper home" asks first, then shows the phrase.
+  const [home, setHome] = useState<null | "ask" | { phrase: string }>(null);
+  const revealPhrase = game.isGuest ? undefined : session.door?.revealPhrase;
   const me = game.me;
 
   useEffect(() => game.wantNames([me ?? undefined]), [game.wantNames, me]);
 
   useInput(
     (input, key) => {
-      if (key.escape || input.toLowerCase() === "q") return props.back();
-      if (input.toLowerCase() === "n" && !game.isGuest && !game.busy) setNaming(true);
+      const k = input.toLowerCase();
+      if (home === "ask") {
+        if (k === "y" && revealPhrase) {
+          // Only if they're still being asked: a key pressed meanwhile said no. A failure must not
+          // reject unhandled, which would bring down the door and every player on it.
+          revealPhrase().then(
+            (phrase) => setHome((h) => (h === "ask" && phrase ? { phrase } : null)),
+            () => setHome(null),
+          );
+          return;
+        }
+        return setHome(null);
+      }
+      if (home) return setHome(null); // any key hides the phrase
+      if (key.escape || k === "q") return props.back();
+      if (k === "n" && !game.isGuest && !game.busy) setNaming(true);
+      if (k === "k" && revealPhrase) setHome("ask");
     },
     { isActive: !naming },
   );
+
+  if (home) {
+    return (
+      <Frame node={session.node} title="TAKE YOUR KEEPER HOME">
+        {home === "ask" ? (
+          <>
+            <Text>This shows your keeper's recovery phrase: 12 words that are your keeper.</Text>
+            <Text color="#a8a29e">With them you can play from your own machine (`watchfire import`) and own your keys.</Text>
+            <Text color="#fde68a">Anyone who sees them can play as you. Make sure nobody is watching your screen.</Text>
+            <Box marginTop={1}>
+              <Text>
+                Show it? <Text color="#fbbf24">[Y]</Text>es / any other key: no
+              </Text>
+            </Box>
+          </>
+        ) : (
+          <>
+            <Text color="#a8a29e">Your keeper's recovery phrase:</Text>
+            <Box marginY={1} paddingX={2}>
+              <Text color="#fde68a" bold>
+                {home.phrase}
+              </Text>
+            </Box>
+            <Text color="#a8a29e">On your own machine: `watchfire import`, then type these words.</Text>
+            <Text color="#a8a29e">The door keeps a copy too, so both can play as you. Keep the words somewhere safe.</Text>
+            <Box marginTop={1}>
+              <Text color="#78716c">Any key to hide it.</Text>
+            </Box>
+          </>
+        )}
+      </Frame>
+    );
+  }
 
   const kept = me ? game.fires.filter((f) => f.keepers.includes(me)) : [];
   const keptBurning = kept.filter((f) => f.phase === "burning").length;
@@ -31,7 +82,19 @@ export function You(props: { game: Game; session: Session; back(): void }) {
     <Frame
       node={session.node}
       title="YOUR KEEPER"
-      footer={naming ? <Text color="#78716c">Enter to save · Esc to cancel</Text> : <Keys keys={[["N", "ame", game.isGuest], ["Esc", " back"]]} />}
+      footer={
+        naming ? (
+          <Text color="#78716c">Enter to save · Esc to cancel</Text>
+        ) : (
+          <Keys
+            keys={[
+              ["N", "ame", game.isGuest],
+              ...(revealPhrase ? [["K", "eeper home"] as [string, string]] : []),
+              ["Esc", " back"],
+            ]}
+          />
+        )
+      }
     >
       {game.isGuest ? (
         <Text color="#a8a29e">You're a guest. Guests watch; keepers play.</Text>

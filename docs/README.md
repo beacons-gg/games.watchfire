@@ -15,4 +15,5 @@ Watchfire is a BBS-style door game played in a terminal: locally with `npx`, or 
 
 - **Phase 1 (spike): done.** `pnpm spike` plays one fire from lighting to ash on `9q72.beacons.gg` through `@watchfire/core` and checks 18 rules the server must enforce. All pass.
 - **Phase 2 (playable CLI): first cut done.** `pnpm play` runs the game; `pnpm build` makes the bundled `npx`-able file.
-- **Next:** the SSH door (phase 3). See [roadmap.md](roadmap.md).
+- **Several servers (phase 2.5): done.**
+- **Phase 3 (SSH door): built and tested locally.** `pnpm door`, then `ssh -p 2222 localhost`. Deploying it is next.
