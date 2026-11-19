@@ -1,0 +1,29 @@
+{
+  "name": "watchfire",
+  "version": "0.1.0",
+  "description": "A BBS-style door game on Beacon. Keep the fires burning.",
+  "type": "module",
+  "bin": {
+    "watchfire": "dist/watchfire.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx src/main.tsx",
+    "build": "node build.ts"
+  },
+  "devDependencies": {
+    "@beaconsgg/client-sdk": "^1.1.0",
+    "@beaconsgg/identity": "^1.1.0",
+    "@types/react": "19.3.0",
+    "@watchfire/core": "workspace:*",
+    "esbuild": "0.28.2",
+    "ink": "8.0.0",
+    "react": "19.3.1",
+    "tsx": "4.23.15"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "watchfire",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "node --test \"packages/*/test/*.test.ts\" \"apps/*/test/*.test.ts\"",
+    "spike": "node scripts/spike-fire.ts",
+    "spike:profile": "node scripts/spike-profile.ts",
+    "play": "pnpm -C apps/cli run dev",
+    "build": "pnpm --filter watchfire build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@beaconsgg/geo": "^1.1.0",
+    "@beaconsgg/identity": "^1.1.0",
+    "@watchfire/core": "workspace:*",
+    "socket.io-client": "^4.8.4"
+  }
+}
