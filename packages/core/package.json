@@ -3,7 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./flame": "./src/flame.ts",
+    "./report": "./src/report.ts",
+    "./time": "./src/time.ts",
+    "./tuning": "./src/tuning.ts"
+  },
   "dependencies": {
     "@beaconsgg/client-sdk": "^1.1.0",
     "@beaconsgg/geo": "^1.1.0",

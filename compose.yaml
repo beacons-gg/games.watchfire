@@ -21,12 +21,16 @@ services:
     ports:
       # Players dial ${WATCHFIRE_DOOR_PUBLIC_PORT}; 22 if this host's own sshd has moved elsewhere.
       - "${WATCHFIRE_DOOR_PUBLIC_PORT:-2222}:2222"
+      # The website: the game explained, the map of fires, the watch log, how to join.
+      - "${WATCHFIRE_WEB_PUBLIC_PORT:-8080}:8080"
     # The door's settings (.env.example lists them); unset ones take the door's own defaults.
     env_file:
       - path: .env
         required: false
     environment:
       WATCHFIRE_DOOR_MASTER_KEY_FILE: /run/secrets/master_key
+      # So the website's join command names the port players dial, not the container's.
+      WATCHFIRE_DOOR_PUBLIC_PORT: ${WATCHFIRE_DOOR_PUBLIC_PORT:-2222}
     secrets: [master_key]
     volumes:
       # Host key, keepers, motd.txt, bans.txt. Back it up (with the master key, kept apart).

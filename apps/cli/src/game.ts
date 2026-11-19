@@ -5,11 +5,8 @@ import {
   clock,
   hostOf,
   connect,
-  FIRE_TUNING,
-  keeperName,
   logsLeft,
   MAX_NAME,
-  carryUnheard,
   membershipChangeText,
   joinResultText,
   membershipChanges,
@@ -22,19 +19,19 @@ import {
   MOVE_TEXT,
   moveServer as moveInList,
   moveBlocker,
-  nearestCity,
-  newsBetween,
   nowSec,
   pinStatuses,
   refusalText,
   safeText,
-  snapshotOf,
   sortFires,
   spendLog,
   withMode,
   withoutServer,
   withServer,
   WORLD_CELLS,
+  foldLook,
+  NameBook,
+  PlaceBook,
   type FireView,
   type LatLng,
   type Move,
@@ -49,7 +46,6 @@ import { emptyKeeper, type KeeperState, type Session, type WatchPlace } from "./
 const REFRESH_MS = 30_000;
 const NEWS_KEEP = 200;
 const NAME_TTL_MS = 10 * 60_000;
-const NAME_LOOKUPS_AT_ONCE = 4;
 const DEFAULT_GUEST_HINT = "Guests can only watch. Connect with an SSH key to keep a fire.";
 
 export type Status = "connecting" | "ready" | "offline";
@@ -58,8 +54,8 @@ export interface Game {
   status: Status;
   error?: string;
   fires: FireView[];
-  /** "Edinburgh, Scotland, United Kingdom" for each fire, by id, filled in as found. */
-  places: Record<string, string>;
+  /** "Edinburgh, Scotland, United Kingdom": a fire's nearest city, once it's been worked out. */
+  nearOf(fireId: string): string | null;
   keeper: KeeperState;
   me: string | null;
   isGuest: boolean;
@@ -130,29 +126,28 @@ export function useGame(session: Session): Game {
   const [status, setStatus] = useState<Status>("connecting");
   const [error, setError] = useState<string>();
   const [fires, setFires] = useState<FireView[]>([]);
-  const [places, setPlaces] = useState<Record<string, string>>({});
   const [keeper, setKeeperState] = useState<KeeperState>(emptyKeeper());
   const [news, setNews] = useState<NewsLine[]>([]);
   const [freshNews, setFreshNews] = useState(0);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [servers, setServers] = useState<ServerStatus[]>([]);
-  const [names, setNames] = useState<Record<string, string | null>>({});
+  // Names and nearest cities, shared with the door's website (core's look.ts). They live outside
+  // React state; `booksChanged` re-renders when either learns something.
+  const names = useRef(new NameBook((did) => wf.current?.displayName(did) ?? Promise.resolve(null), NAME_TTL_MS));
+  const places = useRef(new PlaceBook());
+  const [, setBookVersion] = useState(0);
+  const booksChanged = useCallback((changed: boolean) => changed && setBookVersion((v) => v + 1), []);
   const wf = useRef<Watchfire | null>(null);
   const keeperRef = useRef(keeper);
   const firesRef = useRef(fires);
   firesRef.current = fires;
-  const placesRef = useRef(places);
-  placesRef.current = places;
-  const namesRef = useRef(names);
-  namesRef.current = names;
   const loaded = useRef(false);
   const busyRef = useRef(false);
   // Each connect gets a number; a slower, older one finishing late is dropped (the list may have
   // changed meanwhile). `looking` keeps timer looks from piling up behind a slow one.
   const connectGen = useRef(0);
   const looking = useRef(false);
-  const nameFetched = useRef(new Map<string, number>());
 
   const me = session.wallet?.account.did ?? null;
   const isGuest = !session.wallet;
@@ -168,58 +163,23 @@ export function useGame(session: Session): Game {
     [session.store],
   );
 
-  const nameOf = useCallback((did: string | undefined) => (did && namesRef.current[did]) || keeperName(did), []);
-
-  const wantNames = useCallback((dids: (string | undefined)[]) => {
-    const conn = wf.current;
-    if (!conn) return;
-    const now = Date.now();
-    const todo = [...new Set(dids.filter((d): d is string => !!d))].filter(
-      (d) => now - (nameFetched.current.get(d) ?? 0) > NAME_TTL_MS,
-    );
-    if (!todo.length) return;
-    for (const d of todo) nameFetched.current.set(d, now);
-    void (async () => {
-      // A few lookups in flight at a time; a slow one doesn't hold up the rest.
-      const found: Record<string, string | null> = {};
-      const queue = [...todo];
-      const worker = async () => {
-        for (let d = queue.shift(); d; d = queue.shift()) found[d] = await conn.displayName(d).catch(() => null);
-      };
-      await Promise.all(Array.from({ length: Math.min(NAME_LOOKUPS_AT_ONCE, todo.length) }, worker));
-      // Re-render only when a name actually changed.
-      if (Object.entries(found).some(([d, n]) => namesRef.current[d] !== n)) setNames((prev) => ({ ...prev, ...found }));
-    })();
-  }, []);
-
+  const nameOf = useCallback((did: string | undefined) => names.current.nameOf(did), []);
+  const wantNames = useCallback((dids: (string | undefined)[]) => void names.current.want(dids).then(booksChanged), [booksChanged]);
   /** Label fires with their nearest city. A fire never moves, so each is labelled once. */
-  const label = useCallback(async (list: FireView[]) => {
-    const found: Record<string, string> = {};
-    for (const f of list) {
-      if (placesRef.current[f.id]) continue;
-      const c = await nearestCity(f.location);
-      if (c) found[f.id] = c.label;
-    }
-    if (Object.keys(found).length) setPlaces((p) => ({ ...p, ...found }));
-  }, []);
+  const label = useCallback((list: FireView[]) => void places.current.label(list).then(booksChanged), [booksChanged]);
 
   /** Read the world, fold the change into the news, and remember it for next time. */
   const readWorld = useCallback(async () => {
     const conn = wf.current;
     if (!conn || !conn.servers.length) return;
     try {
-      // A server that didn't answer hasn't lost its fires: mergeLook keeps what we last knew.
+      // A server that didn't answer hasn't lost its fires, and gets no news until it's heard again.
       const look = await conn.fires(WORLD_CELLS);
-      const list = mergeLook(firesRef.current, look);
-      setFires(sortFires(list));
+      const k = keeperRef.current;
+      const { fires: list, snapshot: snap, news: lines } = foldLook({ fires: firesRef.current, snapshot: k.snapshot ?? null }, look, { me, nameOf });
+      setFires(list);
       setStatus("ready");
       setError(undefined);
-      const k = keeperRef.current;
-      // Fires from servers that didn't answer keep their old snapshot entries: no news about them
-      // (not "went dark", not "gone") until their server is heard again.
-      const answered = look.answeredHosts;
-      const snap = carryUnheard(k.snapshot ?? null, snapshotOf(list), answered);
-      const lines = newsBetween(k.snapshot ?? null, snap, { ...FIRE_TUNING, me, nameOf, answered });
       if (!loaded.current) {
         loaded.current = true;
         setFreshNews(lines.length);
@@ -237,7 +197,7 @@ export function useGame(session: Session): Game {
       // Phase and time left come back from the clock (ageFire), so they aren't stored.
       const known = list.map(({ phase: _p, secondsLeft: _s, stale: _st, ...f }) => f as FireView);
       await saveKeeper({ ...keeperRef.current, snapshot: snap, embers, known });
-      void label(list);
+      label(list);
       wantNames([me ?? undefined, ...list.map((f) => f.lighter)]);
     } catch (e: any) {
       setStatus((s) => (s === "connecting" ? "offline" : s));
@@ -417,7 +377,7 @@ export function useGame(session: Session): Game {
         lit = made;
         await saveKeeper(spendLog(keeperRef.current, session.today()));
         replaceFire(made);
-        void label([made]);
+        label([made]);
         return `You strike a light. ${safeText(made.name)} is burning, until ${clock(made.outAt)}.`;
       });
       return lit;
@@ -482,8 +442,8 @@ export function useGame(session: Session): Game {
       act("Carving your name", async (w, conn) => {
         const r = await conn.setDisplayName(w, name);
         if (!r.ok) return r.reason ?? "Your name didn't take.";
-        nameFetched.current.delete(w.account.did);
-        setNames((n) => ({ ...n, [w.account.did]: safeText(name, MAX_NAME) }));
+        names.current.remember(w.account.did, safeText(name, MAX_NAME));
+        setBookVersion((v) => v + 1);
         return `You'll be known as ${safeText(name, MAX_NAME)}.`;
       }),
     [act],
@@ -605,9 +565,9 @@ export function useGame(session: Session): Game {
   const markKeyHintSeen = useCallback(async () => saveKeeper({ ...keeperRef.current, toldKeyHint: true }), [saveKeeper]);
 
   return {
-    status, error, fires, places, keeper, me, isGuest, guestHint, logsLeft: left, news, freshNews, message, busy,
+    status, error, fires, nearOf: (id: string) => places.current.near(id), keeper, me, isGuest, guestHint, logsLeft: left, news, freshNews, message, busy,
     servers, serversFixed, multiServer, readOnlyReason, lastSeen, watchUncovered, uncovered, serversNeedingLook, isQuiet,
-    serverOf, serverNameOf, lightTargets, moveServer, requestJoin, nameOf, wantNames, hasProfileName: !!me && !!names[me], blocker,
+    serverOf, serverNameOf, lightTargets, moveServer, requestJoin, nameOf, wantNames, hasProfileName: !!me && names.current.hasName(me), blocker,
     setMessage, setWatch, markKeyHintSeen, refresh, refreshFire, watchFire, feed, light, takeEmber, warm, rake,
     setName, addServer, removeServer, setServerMode,
   };

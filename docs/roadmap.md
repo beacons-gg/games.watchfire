@@ -50,11 +50,13 @@
 - [x] Container image (one bundled file on Node 24) and `compose.yaml`, built and run locally (see deploy.md)
 - [ ] Deploy: host, domain, DNS; master key in a KMS
 
-## Phase 4: dashboard
+## Phase 4: the website ✅ (2026-11-19)
 
-- [ ] `apps/dashboard` (Vite, static): world map, dying fires, news, today's numbers
-- [ ] Dashboard origin added to `BEACON_CORS_ORIGINS` on our servers
-- [ ] Candidate for the beacons.gg home page
+- [x] `apps/dashboard` (Vite + React), served by the door on :8080 from its own look at the world (`/api/world`): the game explained, how to join (Mac, Windows, phones), today's numbers, a map of the fires, the ones closest to going out, the watch log
+- [x] The game's flame on the page (core's simulation, shared with the terminal)
+- [x] A player's guide: [how-to-play.md](how-to-play.md)
+- [ ] Family playtest on the home network (deploy.md, "On the home network")
+- [ ] Later, for beacons.gg: a static build reading Beacon directly (needs `BEACON_CORS_ORIGINS`)
 
 ## Phase 5: more
 

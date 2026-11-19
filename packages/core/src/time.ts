@@ -1,5 +1,13 @@
 export const DAY_SEC = 86400;
 
+/** Under this much time left a fire is urgent (red); under LOW_SEC, low (orange). */
+export const URGENT_SEC = 3 * 3600;
+export const LOW_SEC = 12 * 3600;
+
+/** How a fire reads by its time left, in the terminal and on the website alike. */
+export const urgency = (secondsLeft: number): "urgent" | "low" | "well" =>
+  secondsLeft < URGENT_SEC ? "urgent" : secondsLeft < LOW_SEC ? "low" : "well";
+
 /** Now, in epoch seconds: the unit every fire time uses. */
 export const nowSec = () => Math.floor(Date.now() / 1000);
 
@@ -24,9 +32,9 @@ export function clock(epochSec: number, now = Date.now()): string {
   return sameDay(d, new Date(now)) ? hhmm(d) : `${d.toLocaleDateString("en-US", { weekday: "short" })} ${hhmm(d)}`;
 }
 
-/** "just now", "3h12m ago". */
-export function ago(epochSec: number): string {
-  const s = Date.now() / 1000 - epochSec;
+/** "just now", "3h12m ago". `now` in epoch seconds (the website passes the door's clock). */
+export function ago(epochSec: number, now = Date.now() / 1000): string {
+  const s = now - epochSec;
   return s < 60 ? "just now" : `${formatDuration(s)} ago`;
 }
 

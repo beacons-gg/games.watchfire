@@ -1,15 +1,12 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Box, Text, Transform, useAnimation, useInput, useWindowSize, type Key } from "ink";
-import { DAY_SEC, formatDuration, stripControls } from "@watchfire/core";
+import { DAY_SEC, formatDuration, LOW_SEC, stripControls, URGENT_SEC } from "@watchfire/core";
 import { Flame } from "./flame.ts";
 
 /** The smallest screen the layout is designed for; bigger terminals get more of everything. */
 export const MIN_WIDTH = 80;
 const MIN_HEIGHT = 24;
 
-/** Under this much time left a fire shows red. */
-export const URGENT_SEC = 3 * 3600;
-const LOW_SEC = 12 * 3600;
 
 /** The whole terminal, never smaller than 80×24 (a smaller window clips, as a BBS screen would). */
 export function useSize(): { width: number; height: number } {

@@ -1,8 +1,8 @@
 # Watchfire
 
-A BBS-style door game on [Beacon](https://beacons.gg). Fires burn at real places; keep them alive with three logs a day. Play in a terminal locally, or over `ssh`. A read-only dashboard shows the world's fires live.
+A BBS-style door game on [Beacon](https://beacons.gg). Fires burn at real places; keep them alive with three logs a day. Play in a terminal locally, or over `ssh`. The door's website explains the game and shows the world's fires live.
 
-Start with [docs/README.md](docs/README.md).
+Players: [docs/how-to-play.md](docs/how-to-play.md). Everything else: [docs/README.md](docs/README.md).
 
 ## Develop
 
@@ -15,8 +15,9 @@ pnpm play             # the game, on 9q72.beacons.gg: this is real play, everyon
 # Testing only: fires of another room type, invisible to everyone playing normally.
 # Don't hand this to playtesters, or their fires won't show up for anyone else.
 WATCHFIRE_FIRE_TYPE=watchfire-dev pnpm play
-pnpm build            # apps/cli/dist/watchfire.mjs, one self-contained file
-pnpm door             # the SSH door on :2222; then: ssh -p 2222 localhost
+pnpm build            # apps/cli/dist/watchfire.mjs (one self-contained file) and the website
+pnpm door             # the SSH door on :2222 (ssh -p 2222 localhost) and its website on :8080
+pnpm dashboard        # the website with live reload on :5173, reading a running door's /api/world
 docker compose up -d --build   # the door in Docker (see docs/deploy.md)
 pnpm spike            # play one fire, lit to ash, on 9q72.beacons.gg (about a minute)
 pnpm spike:profile    # set a name from Watchfire and check the rest of the profile survives

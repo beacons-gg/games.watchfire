@@ -1,11 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { once } from "node:events";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Bans } from "../src/bans.ts";
 import { pacedFetch } from "../src/pacer.ts";
 import { sharedReads } from "../src/shared.ts";
+import { startWeb, visitorHost } from "../src/web.ts";
+import type { WorldLook } from "@watchfire/core";
 import { keeperDir, Keepers } from "../src/keepers.ts";
 import { detectColorDepth } from "watchfire/local";
 
@@ -152,4 +156,52 @@ test("bans: keys, addresses and ranges, read again when the file changes", () =>
   bans.reload();
   assert.equal(bans.ip("203.0.113.7"), false, "lifted");
   assert.equal(bans.key("SHA256:abc"), false);
+});
+
+test("web: the dashboard's files, /api/world, read only, nothing outside its folder", async () => {
+  const root = mkdtempSync(join(tmpdir(), "wf-web-"));
+  writeFileSync(join(root, "index.html"), "<p>flyer</p>");
+  mkdirSync(join(root, "assets"));
+  writeFileSync(join(root, "assets", "app-abc.js"), "1");
+  let report: WorldLook | null = null;
+  const web = startWeb({
+    port: 0,
+    bind: "127.0.0.1",
+    root,
+    report: () => report,
+    online: () => 2,
+    join: (host) => `ssh -p 2222 ${host}`,
+    log: () => {},
+  });
+  await once(web, "listening");
+  const { port } = web.address() as AddressInfo;
+  try {
+    const get = (path: string, init?: RequestInit) => fetch(`http://127.0.0.1:${port}${path}`, init);
+
+    assert.equal((await get("/api/world")).status, 503, "before the first look");
+    report = { at: 1, fires: [], news: [], partial: false };
+    const world = await (await get("/api/world")).json();
+    assert.equal(world.join, "ssh -p 2222 127.0.0.1", "the join command names the address the visitor used");
+    assert.equal(world.online, 2);
+
+    const page = await get("/");
+    assert.equal(await page.text(), "<p>flyer</p>");
+    assert.match(page.headers.get("content-security-policy") ?? "", /default-src 'self'/);
+    const asset = await get("/assets/app-abc.js");
+    assert.match(asset.headers.get("cache-control") ?? "", /immutable/);
+    assert.equal(await (await get("/anything/else")).text(), "<p>flyer</p>", "one page: unknown paths get it");
+    assert.equal((await get("/assets/app-old.js")).status, 404, "a gone build file is a 404, not the page");
+    for (const sneaky of ["/..%2f..%2f..%2fetc%2fpasswd", "/%2e%2e/%2e%2e/etc/passwd", "/assets/..%2f..%2findex.html%00"]) {
+      const res = await get(sneaky);
+      const text = await res.text();
+      assert.ok(res.status === 404 || (res.status === 200 && text === "<p>flyer</p>"), `${sneaky} stays inside the site`);
+    }
+    assert.equal((await get("/api/world", { method: "POST" })).status, 405, "read only");
+
+    assert.equal(visitorHost({ headers: { host: "watchfire.home:8080" } }), "watchfire.home");
+    assert.equal(visitorHost({ headers: { host: "[::1]:8080" } }), "[::1]");
+    assert.equal(visitorHost({ headers: { host: "evil.example; rm -rf /" } }), "localhost", "nothing a shell would read");
+  } finally {
+    web.close();
+  }
 });

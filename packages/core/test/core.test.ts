@@ -15,6 +15,10 @@ import {
   searchCities,
   nearestCity,
   type FireView,
+  NameBook,
+  PlaceBook,
+  foldLook,
+  nowSec,
 } from "../src/index.ts";
 import { evaluate } from "@beaconsgg/jsonlogic-profile";
 
@@ -293,4 +297,48 @@ test("server predicates, labels, join rules and error wording", async () => {
   assert.equal(kept[0]!.readAt, 100, "last seen stays when it was read");
   const fresh = mergeLook(kept, { fires: [fire({ id: "x@a.example", readAt: 300 })], failedHosts: [] }, 300);
   assert.equal(fresh[0]!.stale, undefined, "heard again: no longer stale");
+});
+
+test("NameBook: names looked up a few at a time, kept a while, keeper names until then", async () => {
+  const asked: string[] = [];
+  const book = new NameBook(async (did) => {
+    asked.push(did);
+    return did === "did:key:zA" ? "Grandpa\x1b[31m" : null;
+  }, 60_000);
+  assert.equal(book.nameOf("did:key:zA"), keeperName("did:key:zA"), "a keeper name until it's known");
+  assert.equal(await book.want(["did:key:zA", "did:key:zB", "did:key:zA", undefined]), true);
+  assert.match(book.nameOf("did:key:zA"), /^Grandpa/);
+  assert.ok(!book.nameOf("did:key:zA").includes("\x1b"), "safe to print");
+  assert.equal(book.hasName("did:key:zA"), true);
+  assert.equal(book.hasName("did:key:zB"), false);
+  assert.equal(book.nameOf("did:key:zB"), keeperName("did:key:zB"));
+  assert.equal(await book.want(["did:key:zA"]), false, "known lately: not asked again");
+  assert.deepEqual(asked.sort(), ["did:key:zA", "did:key:zB"]);
+  book.remember("did:key:zB", "Nana");
+  assert.equal(book.nameOf("did:key:zB"), "Nana");
+  book.keepOnly(new Set(["did:key:zB"]));
+  assert.equal(book.hasName("did:key:zA"), false);
+});
+
+test("foldLook: fires sorted, news written, a quiet server's fires kept and not reported gone", () => {
+  const now = nowSec();
+  const fire = (id: string, logs: number): FireView => ({
+    id, name: id.split("@")[0]!, location: { lat: 0, lng: 0 }, logs, placedAt: now - 3600, outAt: now + logs * 3600,
+    phase: "burning", secondsLeft: logs * 3600, keepers: [], warmth: 0, warmedBy: [], emberHolders: [], raked: [], readAt: now,
+  });
+  const first = foldLook({ fires: [], snapshot: null }, { fires: [fire("a@one", 3), fire("b@two", 1)], answeredHosts: ["one", "two"], failedHosts: [] });
+  assert.deepEqual(first.fires.map((f) => f.id), ["b@two", "a@one"], "closest to going out first");
+  const second = foldLook(first, { fires: [fire("a@one", 4)], answeredHosts: ["one"], failedHosts: ["two"] });
+  assert.ok(second.fires.find((f) => f.id === "b@two")?.stale, "two didn't answer: b is kept, as last seen");
+  assert.deepEqual(second.news.map((n) => n.kind), ["fed"], "a log on a; nothing said about b");
+});
+
+test("PlaceBook: each fire's nearest city, once; forgotten when the fire is", async () => {
+  const book = new PlaceBook();
+  const edinburgh = { id: "e@x", location: { lat: 55.95, lng: -3.19 } } as FireView;
+  assert.equal(await book.label([edinburgh]), true);
+  assert.match(book.near("e@x") ?? "", /^Edinburgh/);
+  assert.equal(await book.label([edinburgh]), false, "already labelled");
+  await book.label([]);
+  assert.equal(book.near("e@x"), null);
 });

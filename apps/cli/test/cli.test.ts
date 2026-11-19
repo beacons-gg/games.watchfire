@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Flame, strengthFor } from "../src/flame.ts";
+import { strengthFor } from "@watchfire/core/flame";
+import { Flame } from "../src/flame.ts";
 import { emptyKeeper, memoryKeeperStore } from "../src/session.ts";
 import { detectColorDepth } from "../src/local.ts";
 import { logsLeft, sortFires, spendLog, type FireView } from "@watchfire/core";

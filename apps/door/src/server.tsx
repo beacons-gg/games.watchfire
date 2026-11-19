@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import ssh2, { type AuthContext, type Connection, type ServerChannel } from "ssh2";
 import { render } from "ink";
 import { DEFAULT_SERVERS, keeperName, safeText } from "@watchfire/core";
@@ -14,6 +15,8 @@ import { Keepers } from "./keepers.ts";
 import { pacedFetch } from "./pacer.ts";
 import { sharedReads } from "./shared.ts";
 import { asTerminal, type Pty, type Terminal } from "./terminal.ts";
+import { startWeb } from "./web.ts";
+import { WorldWatch } from "./world.ts";
 
 const { Server, utils } = ssh2;
 
@@ -28,6 +31,15 @@ const IDLE_MS = Number(env.WATCHFIRE_DOOR_IDLE_MINUTES ?? 5) * 60_000;
 const MAX_SESSION_MS = Number(env.WATCHFIRE_DOOR_MAX_MINUTES ?? 60) * 60_000;
 const SERVERS = env.WATCHFIRE_SERVERS?.split(",").filter(Boolean) ?? [...DEFAULT_SERVERS];
 const WRITES_PER_MINUTE = Number(env.WATCHFIRE_DOOR_WRITES_PER_MINUTE ?? 100);
+/** The website (the dashboard and its /api/world): its port, 0 for none. */
+const WEB_PORT = Number(env.WATCHFIRE_WEB_PORT ?? 8080);
+const WEB_ROOT = resolve(env.WATCHFIRE_WEB_ROOT ?? fileURLToPath(new URL("../../dashboard/dist/", import.meta.url)));
+/** The port players dial, when it isn't the one the door listens on (Docker maps it). */
+const PUBLIC_PORT = Number(env.WATCHFIRE_DOOR_PUBLIC_PORT ?? PORT);
+/** The join command the website shows; by default worked out from the address the visitor used. */
+const JOIN = env.WATCHFIRE_JOIN;
+/** Testing only: another room type, invisible to normal play. */
+const FIRE_TYPE: { type?: string } = env.WATCHFIRE_FIRE_TYPE ? { type: env.WATCHFIRE_FIRE_TYPE } : {};
 const GUEST_HINT = "Guests can only watch. Connect with an SSH key to keep a fire.";
 /** A keeper can page once this often. */
 const PAGE_GAP_MS = 5_000;
@@ -229,7 +241,7 @@ async function play(channel: ServerChannel, who: Who, ip: string, pty: Pty, colo
       guestHint: GUEST_HINT,
       fetch: forAll.fetch,
       freshFetch: forAll.fresh,
-      ...(env.WATCHFIRE_FIRE_TYPE ? { fireType: env.WATCHFIRE_FIRE_TYPE } : {}),
+      ...(FIRE_TYPE.type ? { fireType: FIRE_TYPE.type } : {}),
       door: {
         online: () => [...callers.values()].map((c) => c.info),
         onScreen: (screen) => {
@@ -349,6 +361,27 @@ const server = new Server({ hostKeys: [hostKey()], banner: "Watchfire: keep the 
 });
 
 server.listen(PORT, BIND, () => log("listening", { bind: BIND, port: PORT, home: HOME, servers: SERVERS }));
+
+// --- the website ----------------------------------------------------------------------------
+if (WEB_PORT > 0) {
+  const world = new WorldWatch({
+    servers: SERVERS,
+    ...FIRE_TYPE,
+    fetch: forAll.fetch,
+    file: join(HOME, "world.json"),
+    log,
+  });
+  void world.start();
+  startWeb({
+    port: WEB_PORT,
+    bind: BIND,
+    root: WEB_ROOT,
+    report: () => world.report(),
+    online: () => callers.size,
+    join: (host) => JOIN ?? `ssh ${PUBLIC_PORT === 22 ? "" : `-p ${PUBLIC_PORT} `}${host}`,
+    log,
+  });
+}
 
 /** Say goodbye to everyone on the line, then go (docker stop allows 10 seconds). */
 const shutdown = () => {

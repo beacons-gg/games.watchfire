@@ -1,6 +1,11 @@
 # Deploying the door
 
-The door ships as a Docker image: one bundled file (`door.mjs`, the game, the SDK and ssh2 inlined) on `node:24-bookworm-slim`, running as the unprivileged `node` user. `compose.yaml` at the repo root runs it. For what the door is and does, see [ssh-door.md](ssh-door.md).
+The door ships as a Docker image: one bundled file (`door.mjs`, the game, the SDK and ssh2 inlined) and the website, on `node:24-bookworm-slim`, running as the unprivileged `node` user. `compose.yaml` at the repo root runs it. For what the door is and does, see [ssh-door.md](ssh-door.md); for players, [how-to-play.md](how-to-play.md).
+
+Two ports:
+
+- **2222: the game**, over ssh.
+- **8080: the website**, the flyer: what the game is, how to play, how to join (with the right `ssh` command for this door), and the world live: a map of the fires, the ones closest to going out, and the watch log. It only reads; it has nothing to log in to.
 
 ## First start
 
@@ -15,7 +20,20 @@ docker compose up -d --build
 ssh -p 2222 <host>
 ```
 
-`docker compose ps` shows it `healthy` once it's taking calls.
+`docker compose ps` shows it `healthy` once it's taking calls. The website is at `http://<host>:8080`.
+
+## On the home network (the family door)
+
+The simplest setup, and the one this was built for: a computer at home that's always on (a home server, a NAS that runs Docker, a spare PC or a Raspberry Pi 4/5) runs the door, and everyone in the house plays from their own computer or phone.
+
+1. **Give the computer a fixed address.** In the router, reserve its IP (for example `192.168.1.20`) so it doesn't change. If the router lets you name devices, a name like `watchfire.home` (or `watchfire.lan`, whatever your router uses) is friendlier than the number.
+2. **Start the door** there, as in [First start](#first-start).
+3. **Hand out the website:** `http://192.168.1.20:8080` (or `http://watchfire.home:8080`). It shows each visitor the `ssh` command with the address they used, and walks them through making a key on a Mac, Windows or a phone.
+4. **Don't forward the ports** on the router. The door is for the house; nothing from outside can reach it.
+
+The door still needs the internet: the fires live on Beacon servers (`9q72.beacons.gg`). Family who aren't at home can't reach a LAN-only door; when that day comes, see [Behind a firewall](#behind-a-firewall-or-load-balancer) (or a VPN such as Tailscale, which keeps it private).
+
+On a Raspberry Pi, build the image on the Pi itself (`docker compose up -d --build`), or build it elsewhere for `linux/arm64`. The image works on both.
 
 ## Two secrets
 
@@ -35,6 +53,8 @@ Compose reads `.env` for the port and secrets, and passes it whole to the door, 
 | Setting | Default | |
 | --- | --- | --- |
 | `WATCHFIRE_DOOR_PUBLIC_PORT` | `2222` | The port players dial. `22` makes it plain `ssh <host>`: move the host's own sshd to another port first, and make sure you can still reach it. |
+| `WATCHFIRE_WEB_PUBLIC_PORT` | `8080` | The website's port |
+| `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | The join command the website shows, when players should use a particular name |
 | `WATCHFIRE_SERVERS` | `https://9q72.beacons.gg` | Servers a new keeper starts with, comma-separated |
 | `WATCHFIRE_DOOR_MAX_SESSIONS`, `_MAX_PER_IP`, `_IDLE_MINUTES`, `_MAX_MINUTES`, `_WRITES_PER_MINUTE` | 50, 5, 5, 60, 100 | As in [ssh-door.md](ssh-door.md#run-it) |
 | `WATCHFIRE_IMAGE` | `watchfire-door:latest` | The image's name, to push it to a registry and pull it on the host |
@@ -48,6 +68,7 @@ Inside the container, `TZ=UTC` (a door day is a UTC day, and times on screen mat
 - `host_key`: the door's SSH host key, made on first start. Players' ssh clients remember it, so it must survive: losing it makes every returning player see a "host key changed" warning.
 - `keepers/`: one folder per SSH key (its sealed wallet and its game state).
 - `motd.txt`, `bans.txt`: the sysop's, below.
+- `world.json`: the website's watch log, so a restart doesn't empty it.
 
 Back it up regularly, for example:
 

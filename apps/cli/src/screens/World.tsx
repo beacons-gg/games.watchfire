@@ -72,7 +72,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
         {page.map((f, i) => {
           const idx = top + i;
           const ash = f.phase === "ash";
-          const near = (game.places[f.id] ?? "").split(",")[0] ?? "";
+          const near = (game.nearOf(f.id) ?? "").split(",")[0] ?? "";
           const stale = game.lastSeen(f.id) !== null;
           return (
             <Text key={f.id} wrap="truncate-end" color={idx === sel ? "#fbbf24" : ash ? "#78716c" : undefined}>

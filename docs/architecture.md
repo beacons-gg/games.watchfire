@@ -7,19 +7,19 @@ watchfire/
   packages/core       @watchfire/core: tuning, fire policy, items, readFire, connect()   [built]
   apps/cli            the door game UI (Ink), run locally or inside the SSH door        [built]
   apps/door           the SSH server that hosts apps/cli per session                    [built]
-  apps/dashboard      static read-only site: world map, dying fires, news               [phase 4]
+  apps/dashboard      the website: the game explained, world map, dying fires, news     [built]
   scripts/            spikes and tools
   docs/
 ```
 
 - **Node 24** through nvm (`.nvmrc`), pnpm workspaces, no build step in development: core, tests and scripts run under Node's type stripping, and the CLI's TSX runs under `tsx`. `pnpm typecheck` runs `tsc`; `pnpm test` runs `node --test`.
-- **No game backend.** Every piece talks to Beacon servers directly. The SSH door is a host for terminal sessions, not a game server: it holds door players' keys and runs the same client code.
+- **No game backend.** Every piece talks to Beacon servers directly. The SSH door is a host for terminal sessions, not a game server: it holds door players' keys and runs the same client code. It also serves the website, from its own reads of the world.
 
 ```
  local CLI ─────────┐
                      ├──► @watchfire/core ──► Beacon servers (9q72.beacons.gg, …)
  ssh ─► door ─► CLI ┘                              ▲
- browser ─► dashboard (reads only) ─────────────────┘
+ browser ─► door's website (/api/world, reads only) ┘
 ```
 
 ## `@watchfire/core`
@@ -35,6 +35,9 @@ Shared by everything:
 - `beacon.ts`: `connect({ servers, wallet })` returns the game's moves (`light`, `feed`, `collectEmber`, `warmHands`, `rakeAshes`, `fire`, `fires`, `displayName`, `setDisplayName`, `requestToJoin`) and the multi-server lookups (`serverOf`, `lightTargets`, `coverageAt`, `writableOrigin`, `readOnlyReason`, `watchFire`, `reorder`, `setMode`, `recheck`). `light` owns placement: the default server, the spread within a city, and refusing a chosen server that can't take the fire on top of the SDK client. It verifies each server's descriptor and reports a status per server (`ok`, `notHosting`, `keyChanged`, `unreachable`), plus membership and latency. Fires are read from every `ok` server; moves go only to servers the player can play on (`canPlayOn`: play mode, and a member where that applies), and anything else throws `ReadOnlyError` with the reason; new fires go to the play server that covers the place best (`selectCoveringServer`). Ops retry with the same nonce (`sendOpWithRetry`).
 - `servers.ts`: `SavedServer` (origin, mode, pinned key), `directoryServers()` for the beacons.gg directory, `coverageLabel`, `accessLabel`, `serverLabel`, `canPlayOn`, `canAskToJoin`, `isDown`, `needsRecheck`, `needsLook`, `downHosts`, `membershipChanges`, and the pure list edits behind the Servers screen: `pinStatuses` (trust on first use), `withServer`, `withoutServer`, `withMode`, `moveServer`.
 - `profiles.ts`: `publishDisplayName`, which sets a name and keeps the rest of the player's profile.
+- `flame.ts` (`@watchfire/core/flame`): the fire animation's simulation (`FlameSim`, `FLAME_PALETTE`, `strengthFor`), with no imports, drawn by the CLI in half-blocks and by the website on a canvas.
+- `report.ts` (`@watchfire/core/report`): `WorldReport`, what the door's `/api/world` gives the website.
+- `look.ts`: reading the world the same way in the game and the door's website: `foldLook` (a look merged into what was known, with the news), `NameBook` (display names, looked up a few at a time and kept a while), `PlaceBook` (each fire's nearest city).
 
 Also: `newsBetween`/`snapshotOf` (the news), `safeText`/`stripControls` (player text), `MOVE_TEXT` and `refusalText` (every refusal in one place), `keeperName` (a stable two-word name from a DID, e.g. "Quiet Heron", so no profile reads), `searchCities`/`nearestCity`, `distanceKm`/`jitter`/`formatDuration`, and `refusalText` (refusal codes in plain words).
 
@@ -58,8 +61,9 @@ An `ssh2` server that renders the CLI's Ink app (`watchfire/app`, exported by `a
 
 ## Dashboard (`apps/dashboard`)
 
-- A static Vite site. No wallet and no backend.
-- World reads: one discovery read over `WORLD_CELLS` per trusted server, then `resolveRoom` per fire, refreshed on a timer. Live: `subscribeRoom` for up to 256 fires (dying fires first).
-- Views: a world map of glowing fires (brighter = more logs, flicker = dying), a "dying fires" ticker, the news feed, and today's numbers.
-- Needs the dashboard's origin in each server's `BEACON_CORS_ORIGINS`.
-- An indexer service only if fires outgrow a few hundred.
+The website, and the game's flyer: a Vite + React page served by the door (see [ssh-door.md](ssh-door.md#the-website)).
+
+- **Reads `/api/world` from the door**, not Beacon. The door already reads the world (shared across its sessions) and, with the same core code as the game (`look.ts`), labels fires with their nearest city, looks up names, and writes the watch log; the page gets all that in one small JSON (`WorldReport`, `@watchfire/core/report`). So the browser needs no Beacon SDK, no city list, and no CORS entry on any Beacon server.
+- **Shows:** the hero (the game's own flame, from `@watchfire/core/flame`, on a canvas, burning higher the more fires burn), the join command, today's numbers, a map of the fires (`d3-geo`, Natural Earth 1:50m, framed on the fires or the whole world), the fires closest to going out, a fire's details, the watch log, how to play (its numbers straight from core's `tuning.ts`), and how to join on a Mac, Windows or a phone.
+- Countdowns tick every second between reads, on the server's clock.
+- A static site that reads Beacon directly (for a beacons.gg home page) remains possible later: it would need the origin in each server's `BEACON_CORS_ORIGINS`.

@@ -30,6 +30,10 @@ ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 | `WATCHFIRE_DOOR_MASTER_KEY_FILE` | | A file holding it instead (a Docker secret) |
 | `WATCHFIRE_SERVERS` | `9q72.beacons.gg` | Servers a new keeper starts with |
 | `WATCHFIRE_FIRE_TYPE` | `watchfire` | Testing only: another room type, invisible to normal play |
+| `WATCHFIRE_WEB_PORT` | `8080` | The website (`0`: none) |
+| `WATCHFIRE_WEB_ROOT` | `apps/dashboard/dist` | The built website (`/app/web` in the image) |
+| `WATCHFIRE_DOOR_PUBLIC_PORT` | the door's port | The port players dial, for the website's join command (Docker maps it) |
+| `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | The join command the website shows, if it should name something else |
 
 `<home>/motd.txt` is the sysop's announcement: it greets every player as they arrive, and edits take effect for the next caller. `<home>/bans.txt` is the ban list (see [Bans](#bans)).
 
@@ -74,6 +78,15 @@ For our own servers, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's address 
 - **Who's online** (O on the main screen): every node, who's on it (keeper name, or "a guest"), how long, and what they're doing ("at a fire", "surveying the world"…).
 - **Pages:** on who's online, ↑↓ to a node and P to send it one line (up to 120 characters). It shows on whatever screen they're on and rings their terminal bell; their last few pages are listed on who's online. Keepers can page (guests can read pages, not send them), once every 5 seconds. The door logs that a page was sent, never what it said.
 - **Sysop announcements**: `motd.txt`.
+- **The website** (port 8080): the game explained, how to join, and the world live. See [The website](#the-website).
+
+## The website
+
+The door also serves `apps/dashboard`, the game's flyer: what Watchfire is, how to play, how to join (the `ssh` command, worked out from the address each visitor used, with steps for a Mac, Windows and phones), and the world live. Nothing to log in to; it only reads.
+
+- `world.ts` looks at the world every 30 seconds through the door's shared reads, on the door's servers (`WATCHFIRE_SERVERS`): the fires, their nearest cities, their lighters' names, and the watch log (what was lit, fed, filled and lost), kept in `<home>/world.json`.
+- `web.ts` serves the built site and `GET /api/world` (that look, plus the join command and how many are at the door). GET and HEAD only; files only from the site's folder; `default-src 'self'`.
+- `pnpm dashboard` runs the site with live reload, reading `/api/world` from a door running locally (`pnpm door`).
 
 ## Bans
 

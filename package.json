@@ -7,16 +7,17 @@
     "node": ">=22.6"
   },
   "scripts": {
-    "typecheck": "tsc -p .",
+    "typecheck": "tsc -p . && tsc -p apps/dashboard",
     "test": "node --test \"packages/*/test/*.test.ts\" \"apps/*/test/*.test.ts\"",
     "spike": "node scripts/spike-fire.ts",
     "spike:profile": "node scripts/spike-profile.ts",
     "play": "pnpm -C apps/cli run dev",
-    "build": "pnpm --filter watchfire build",
+    "build": "pnpm --filter watchfire --filter @watchfire/dashboard build",
     "spike:servers": "node scripts/spike-servers.ts",
     "servers:up": "BEACON_ADMINS=$(node scripts/local-operator.ts did) docker compose -f scripts/local-servers/compose.yaml up -d --wait",
     "servers:down": "docker compose -f scripts/local-servers/compose.yaml down -v",
-    "door": "pnpm -C apps/door run dev"
+    "door": "pnpm -C apps/door run dev",
+    "dashboard": "pnpm -C apps/dashboard run dev"
   },
   "devDependencies": {
     "@beaconsgg/client-sdk": "^1.1.0",
