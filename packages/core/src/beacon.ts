@@ -87,8 +87,11 @@ export interface Watchfire {
    * the pending ones. True when something changed and a fresh connect is worth it.
    */
   recheck(): Promise<boolean>;
-  /** Call `onChange` whenever the fire changes (and after a reconnect). Returns the unsubscribe. */
-  watchFire(fireId: string, onChange: () => void): () => void;
+  /**
+   * Hear a fire change live: on every change (and after a reconnect) it's read again, fresh
+   * (`ConnectOptions.freshFetch`), and handed over. Returns the unsubscribe.
+   */
+  watchFire(fireId: string, onFire: (fire: FireView) => void): () => void;
 }
 
 export interface OpOutcome {
@@ -104,8 +107,13 @@ export interface ConnectOptions {
   /** Room type to play with. Spikes and tests pass their own so they stay out of real play. */
   type?: string;
   tuning?: FireTuning;
-  /** The fetch the client uses. The SSH door passes one that paces writes across all its players. */
+  /** The fetch the client uses. The SSH door passes one that shares reads and paces writes. */
   fetch?: typeof fetch;
+  /**
+   * The fetch for a read that must see the latest: a fire just after the live socket said it
+   * changed. The door's shared reads could answer that from before the change. Defaults to `fetch`.
+   */
+  freshFetch?: typeof fetch;
 }
 
 /** Every precision-1 geohash cell: the whole world in one discovery read. */
@@ -164,12 +172,10 @@ async function inspect(
 export async function connect(opts: ConnectOptions): Promise<Watchfire> {
   const type = opts.type ?? FIRE_TYPE;
   const tuning = opts.tuning ?? FIRE_TUNING;
-  const client = createClient({
-    connect: io,
-    game: GAME_SLUG,
-    understands: UNDERSTANDS,
-    ...(opts.fetch ? { fetch: opts.fetch as never } : {}),
-  });
+  const clientWith = (f: typeof fetch | undefined) =>
+    createClient({ connect: io, game: GAME_SLUG, understands: UNDERSTANDS, ...(f ? { fetch: f as never } : {}) });
+  const client = clientWith(opts.fetch);
+  const freshClient = opts.freshFetch ? clientWith(opts.freshFetch) : client;
 
   const found = await Promise.all(asSaved(opts.servers).map((s) => inspect(client, s, { wallet: opts.wallet, ping: true })));
   // The statuses change in place (join, reorder, mode) and everything below is derived from them,
@@ -214,8 +220,8 @@ export async function connect(opts: ConnectOptions): Promise<Watchfire> {
   const outcome = (r: { ok: boolean; error?: string }): OpOutcome =>
     r.ok ? { ok: true } : { ok: false, error: r.error };
 
-  const fire = async (id: string) => {
-    const room = await client.resolveRoom(readOrigin(id), id);
+  const fire = async (id: string, from = client) => {
+    const room = await from.resolveRoom(readOrigin(id), id);
     return room ? readFire(room as unknown as RoomLike) : null;
   };
 
@@ -270,10 +276,12 @@ export async function connect(opts: ConnectOptions): Promise<Watchfire> {
       return answers.some(Boolean);
     },
 
-    watchFire(id, onChange) {
+    watchFire(id, onFire) {
       const e = entryFor(id);
       if (!e) return () => {};
-      const sock = client.subscribeRoom(e.origin, id, onChange, onChange);
+      // A failed read is skipped: the next change, or the next look at the world, catches up.
+      const changed = () => void fire(id, freshClient).then((f) => f && onFire(f), () => {});
+      const sock = client.subscribeRoom(e.origin, id, changed, changed);
       return () => sock.disconnect();
     },
 

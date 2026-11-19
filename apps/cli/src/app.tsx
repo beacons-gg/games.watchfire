@@ -7,7 +7,7 @@ import { Help } from "./screens/Help.tsx";
 import { Light } from "./screens/Light.tsx";
 import { Main } from "./screens/Main.tsx";
 import { News } from "./screens/News.tsx";
-import { Online } from "./screens/Online.tsx";
+import { Online, pageText } from "./screens/Online.tsx";
 import { Servers } from "./screens/Servers.tsx";
 import { You } from "./screens/You.tsx";
 import { Watch } from "./screens/Watch.tsx";
@@ -29,7 +29,12 @@ export function App(props: { session: Session; onQuit?: () => void }) {
   const checkedFirstRun = useRef(false);
 
   // Tell the door what this player is doing, for who's online.
-  useEffect(() => session.door?.onScreen(screen.name), [screen.name]);
+  useEffect(() => {
+    session.door?.onScreen(screen.name);
+  }, [screen.name]);
+
+  // A page from another node shows on whatever screen the player is on.
+  useEffect(() => session.door?.onPage((p) => game.setMessage(pageText(p))), [game.setMessage]);
 
   // Once the saved state has loaded: a first run asks where the keeper keeps watch; anyone else
   // lands on the main screen, where the door's announcement greets them.
@@ -76,7 +81,7 @@ export function App(props: { session: Session; onQuit?: () => void }) {
     case "help":
       return <Help session={session} back={home} />;
     case "online":
-      return <Online session={session} back={home} />;
+      return <Online game={game} session={session} back={home} />;
     case "watch":
       return (
         <Watch

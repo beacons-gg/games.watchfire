@@ -1,0 +1,10 @@
+# Only what the door's image build needs: sources, manifests and the lockfile.
+**/node_modules
+**/dist
+.git
+.watchfire*
+*.log
+.env
+secrets
+docs
+scripts/local-servers

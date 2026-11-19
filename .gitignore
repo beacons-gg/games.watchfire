@@ -5,3 +5,4 @@ dist/
 .watchfire/
 .watchfire-dev/
 .watchfire-door/
+secrets/

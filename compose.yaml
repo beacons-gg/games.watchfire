@@ -1,0 +1,45 @@
+# Deploy the Watchfire SSH door:
+#
+#   cp .env.example .env            # then edit it
+#   mkdir -p secrets && openssl rand -base64 32 > secrets/master.key   # back this up separately!
+#   docker compose up -d --build
+#   ssh -p 2222 <this host>
+#
+# See docs/deploy.md.
+name: watchfire
+
+services:
+  door:
+    build:
+      context: .
+      dockerfile: apps/door/Dockerfile
+      # The @beaconsgg registry is private: the build reads your npm credentials as a secret.
+      secrets: [npmrc]
+    image: ${WATCHFIRE_IMAGE:-watchfire-door:latest}
+    init: true
+    restart: unless-stopped
+    ports:
+      # Players dial ${WATCHFIRE_DOOR_PUBLIC_PORT}; 22 if this host's own sshd has moved elsewhere.
+      - "${WATCHFIRE_DOOR_PUBLIC_PORT:-2222}:2222"
+    # The door's settings (.env.example lists them); unset ones take the door's own defaults.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      WATCHFIRE_DOOR_MASTER_KEY_FILE: /run/secrets/master_key
+    secrets: [master_key]
+    volumes:
+      # Host key, keepers, motd.txt, bans.txt. Back it up (with the master key, kept apart).
+      - door-data:/data
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+secrets:
+  npmrc:
+    file: ${NPMRC:-${HOME}/.npmrc}
+  master_key:
+    file: ${WATCHFIRE_MASTER_KEY_FILE:-./secrets/master.key}
+
+volumes:
+  door-data:

@@ -21,6 +21,7 @@
   "devDependencies": {
     "@beaconsgg/client-sdk": "^1.1.0",
     "@types/node": "^26.6.6",
+    "esbuild": "0.28.2",
     "typescript": "^7.0.2"
   },
   "dependencies": {

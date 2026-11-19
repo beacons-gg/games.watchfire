@@ -45,9 +45,10 @@
 - [x] Who's online, sysop announcements (`motd.txt`)
 - [x] Limits: sessions in total and per address, idle timeout, session length; no shell, exec, SFTP or forwarding
 - [x] Tested over real ssh: keeper and guest at once, light and feed through the door, quit, Ctrl+C, hangup, idle, the same key returning as the same keeper; refusals of exec, SFTP and both forwards
-- [ ] Deploy: container image, host, domain; master key in a KMS
-- [ ] Share work across sessions: one world poller per server list, one name cache
-- [ ] Page a node; ban list
+- [x] Shared reads: discovery and fires read once for the whole door (10 s), a move forgets what it changed; live changes read fresh, one request per change for all its watchers
+- [x] One session per keeper; page a node (P on who's online, with the terminal bell); ban list (`bans.txt`: keys, addresses, ranges; live)
+- [x] Container image (one bundled file on Node 24) and `compose.yaml`, built and run locally (see deploy.md)
+- [ ] Deploy: host, domain, DNS; master key in a KMS
 
 ## Phase 4: dashboard
 

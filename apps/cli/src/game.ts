@@ -258,6 +258,7 @@ export function useGame(session: Session): Game {
         wallet: session.wallet,
         ...(session.fireType ? { type: session.fireType } : {}),
         ...(session.fetch ? { fetch: session.fetch } : {}),
+        ...(session.freshFetch ? { freshFetch: session.freshFetch } : {}),
       });
       if (gen !== connectGen.current) return; // a newer connect (e.g. the list changed) supersedes this one
       wf.current = conn;
@@ -342,8 +343,8 @@ export function useGame(session: Session): Game {
   );
 
   const watchFire = useCallback(
-    (id: string) => wf.current?.watchFire(id, () => void refreshFire(id)) ?? (() => {}),
-    [refreshFire],
+    (id: string) => wf.current?.watchFire(id, replaceFire) ?? (() => {}),
+    [replaceFire],
   );
 
   const left = logsLeft(keeper, session.today());

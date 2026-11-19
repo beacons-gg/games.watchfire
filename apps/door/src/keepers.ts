@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadOrCreateWallet, revealRecoveryPhrase, type SecureKeyStore } from "@beaconsgg/client-sdk";
 import type { Wallet } from "@beaconsgg/identity";
@@ -21,8 +22,8 @@ export const keeperDir = (home: string, sshKey: Buffer) => join(home, "keepers",
  * keys. Each keeper lives in `<home>/keepers/<sha256 of the SSH key>/`, the wallet store's values
  * (recovery phrase included) encrypted with the door's master key (AES-256-GCM).
  *
- * The master key comes from WATCHFIRE_DOOR_MASTER_KEY (32 bytes, base64), or is made once and kept
- * in `<home>/master.key`. Moving it to a KMS is on the roadmap.
+ * The master key (32 bytes, base64) comes from the environment or a secret file, or is made once
+ * and kept in `<home>/master.key` (see masterKey). Moving it to a KMS is on the roadmap.
  */
 export class Keepers {
   private readonly home: string;
@@ -70,10 +71,15 @@ function sealed(store: SecureKeyStore, key: Buffer): SecureKeyStore {
   };
 }
 
+/**
+ * The master key: WATCHFIRE_DOOR_MASTER_KEY itself, or the file WATCHFIRE_DOOR_MASTER_KEY_FILE
+ * names (a Docker secret), or else `<home>/master.key`, made on first start.
+ */
 function masterKey(home: string): Buffer {
-  const fromEnv = process.env.WATCHFIRE_DOOR_MASTER_KEY;
-  const source = fromEnv ? "WATCHFIRE_DOOR_MASTER_KEY" : join(home, "master.key");
-  const key = Buffer.from(fromEnv ?? readOrCreate(source, () => randomBytes(32).toString("base64")).trim(), "base64");
+  const { WATCHFIRE_DOOR_MASTER_KEY: value, WATCHFIRE_DOOR_MASTER_KEY_FILE: file } = process.env;
+  const source = value ? "WATCHFIRE_DOOR_MASTER_KEY" : (file ?? join(home, "master.key"));
+  const text = value || (file ? readFileSync(file, "utf8") : readOrCreate(source, () => randomBytes(32).toString("base64")));
+  const key = Buffer.from(text.trim(), "base64");
   if (key.length !== 32) throw new Error(`${source} must hold 32 bytes, base64`);
   return key;
 }

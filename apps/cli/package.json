@@ -21,7 +21,6 @@
     "@beaconsgg/identity": "^1.1.0",
     "@types/react": "19.3.0",
     "@watchfire/core": "workspace:*",
-    "esbuild": "0.28.2",
     "ink": "8.0.0",
     "react": "19.3.1",
     "tsx": "4.23.15"

@@ -1,3 +1,5 @@
+import { requestOf } from "./request.ts";
+
 /**
  * Beacon limits signed writes per address (120 a minute by default), and every door player writes
  * from the door's one address. This fetch spaces writes (any non-GET) to each server evenly, at
@@ -12,9 +14,9 @@ export function pacedFetch(perMinute = 100, inner: typeof fetch = fetch, windowM
   const nextAt = new Map<string, number>(); // origin -> when its next write may go
 
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-    if (method === "GET" || method === "HEAD") return inner(input, init);
-    const origin = new URL(input instanceof Request ? input.url : String(input)).origin;
+    const { read, url } = requestOf(input, init);
+    if (read) return inner(input, init);
+    const origin = url.origin;
     const now = Date.now();
     const at = Math.max(now, nextAt.get(origin) ?? 0);
     if (at - now > maxWaitMs) return busy(Math.ceil((at - now) / 1000));

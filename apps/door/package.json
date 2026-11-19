@@ -5,7 +5,8 @@
   "description": "The Watchfire SSH door: ssh in and play, nothing to install.",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/door.ts"
+    "dev": "tsx src/door.ts",
+    "build": "node build.ts"
   },
   "dependencies": {
     "@beaconsgg/client-sdk": "^1.1.0",

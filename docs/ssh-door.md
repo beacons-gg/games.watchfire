@@ -7,7 +7,7 @@ $ ssh watchfire.<domain>         # once deployed
 
 No install, no sign-up: the most door-game way to play. BBS callers dialed in and the BBS launched the door. Here SSH is the dial-in and the door launches the game.
 
-**Status: built and tested locally** (`apps/door`), not yet deployed. See [Not yet](#not-yet).
+**Status: built, tested over real ssh, and packaged for Docker** (`apps/door`, [deploy.md](deploy.md)); not yet on a public host. See [Not yet](#not-yet).
 
 ## Run it
 
@@ -19,7 +19,7 @@ ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `WATCHFIRE_DOOR_HOME` | `./.watchfire-door` | Host key, master key, keepers, `motd.txt` |
+| `WATCHFIRE_DOOR_HOME` | `./.watchfire-door` | Host key, master key, keepers, `motd.txt`, `bans.txt` |
 | `WATCHFIRE_DOOR_PORT` / `_BIND` | `2222` / `0.0.0.0` | Where it listens |
 | `WATCHFIRE_DOOR_MAX_SESSIONS` | `50` | Sessions at once; the next caller hears "the door is full" |
 | `WATCHFIRE_DOOR_MAX_PER_IP` | `5` | Connections per address (one game per connection) |
@@ -27,10 +27,13 @@ ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 | `WATCHFIRE_DOOR_MAX_MINUTES` | `60` | The longest one session lasts |
 | `WATCHFIRE_DOOR_WRITES_PER_MINUTE` | `100` | Beacon writes per server for the whole door (see [Rate limits](#rate-limits)) |
 | `WATCHFIRE_DOOR_MASTER_KEY` | made once in `master.key` | 32 bytes, base64: seals every keeper's recovery phrase |
+| `WATCHFIRE_DOOR_MASTER_KEY_FILE` | | A file holding it instead (a Docker secret) |
 | `WATCHFIRE_SERVERS` | `9q72.beacons.gg` | Servers a new keeper starts with |
 | `WATCHFIRE_FIRE_TYPE` | `watchfire` | Testing only: another room type, invisible to normal play |
 
-`<home>/motd.txt` is the sysop's announcement: it greets every player as they arrive, and edits take effect for the next caller.
+`<home>/motd.txt` is the sysop's announcement: it greets every player as they arrive, and edits take effect for the next caller. `<home>/bans.txt` is the ban list (see [Bans](#bans)).
+
+`pnpm -C apps/door run build` bundles the door into one file, `apps/door/dist/door.mjs` (SDK, game, ssh2 and cities inlined): `node door.mjs` runs it anywhere with Node 24, no install. The Docker image is that file on `node:24-bookworm-slim`.
 
 ## How it works
 
@@ -57,30 +60,43 @@ The door is **custodial**: it holds a Beacon wallet for each player, because an 
 - **One session per keeper:** a second connection with the same key hears "Your keeper is already by the fire on node 03". Each session keeps its own copy of the keeper's state, so two at once would overwrite each other's embers and servers. Guests have no limit beyond the address limit.
 - **A door day is a UTC day** (the door can't know each player's timezone), so logs reset at midnight UTC. Times on screen are in the door's timezone; run the door with `TZ=UTC` to match.
 
-## Rate limits
+## Rate limits and shared reads
 
-Beacon limits signed writes **per address** (120 a minute by default, `BEACON_WRITE_RATE_LIMIT_MAX`), and every door player writes from the door's one address. The door passes every session a shared, paced `fetch` (`pacer.ts`): writes (anything but GET) to each server are spaced evenly to `WRITES_PER_MINUTE` (one every 0.6 s at 100), so a player usually sees "Laying a log…" a moment longer at most. When the queue for a server is more than 10 seconds deep, a write is turned away at once with Beacon's own over-budget answer, and the player sees "The wind's too strong. Try again in a moment." rather than waiting out the SDK's 15-second timeout. Reads aren't paced.
+Beacon limits signed writes **per address** (120 a minute by default, `BEACON_WRITE_RATE_LIMIT_MAX`), and every door player writes from the door's one address. The door passes every session one shared `fetch`, built of two layers:
 
-- For our own servers, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's address and `WATCHFIRE_DOOR_WRITES_PER_MINUTE` with it.
-- Players on other operators' servers share the default budget. Note this when we list the game.
+- **Shared reads** (`shared.ts`). Every session reads the world every 30 seconds (discovery, then each fire); with many players on, those are mostly the same GETs. Those two reads are shared: an answer from the last 10 seconds is given again, and sessions asking at once wait on one request. Everything else (profiles, access checks, pings) goes straight through, so nothing that's read and then written back goes stale. A move forgets that fire and discovery, before and after it lands, so players see their own moves at once. When the live socket says a fire changed, each watcher's screen reads it **fresh** (core's `freshFetch`): never from before the change, but everyone watching that fire shares the one request, and its answer refreshes the shared copy. Fifty players watching a hundred fires cost the servers about what a handful do.
+- **Paced writes** (`pacer.ts`). Writes (anything but GET) to each server are spaced evenly to `WRITES_PER_MINUTE` (one every 0.6 s at 100), so a player usually sees "Laying a log…" a moment longer at most. When the queue for a server is more than 10 seconds deep, a write is turned away at once with Beacon's own over-budget answer, and the player sees "The wind's too strong. Try again in a moment." rather than waiting out the SDK's 15-second timeout.
+
+For our own servers, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's address and `WATCHFIRE_DOOR_WRITES_PER_MINUTE` with it. Players on other operators' servers share the default budget. Note this when we list the game.
 
 ## Things only the door can do
 
 - **Who's online** (O on the main screen): every node, who's on it (keeper name, or "a guest"), how long, and what they're doing ("at a fire", "surveying the world"…).
+- **Pages:** on who's online, ↑↓ to a node and P to send it one line (up to 120 characters). It shows on whatever screen they're on and rings their terminal bell; their last few pages are listed on who's online. Keepers can page (guests can read pages, not send them), once every 5 seconds. The door logs that a page was sent, never what it said.
 - **Sysop announcements**: `motd.txt`.
+
+## Bans
+
+`<home>/bans.txt`, one entry a line, `#` starts a comment:
+
+```
+SHA256:pSx4ZODTZVdpnXk1zqy8OGQWW/CNoJlmzBEzAWhZoDk   # an SSH key, as session-start logs name it
+203.0.113.7                                          # an address
+198.51.100.0/24                                      # a range, IPv4 or IPv6
+```
+
+The door looks at it every 10 seconds and reads it again when it has changed: no restart. A banned address is turned away before it can sign in; a banned key hears "This key isn't welcome here."; anyone already on who matches is shown out within 10 seconds ("The door has closed to you."). A banned key can still come in without it, as a guest who can only watch, unless its address is banned too. Lines the door can't read are logged (`bans-unreadable-line`) and skipped.
 
 ## Security
 
 - Host key: ed25519, made once in `<home>/host_key` (0600). Keep it with the data: players' ssh clients remember it.
-- Master key: in `WATCHFIRE_DOOR_MASTER_KEY` or `<home>/master.key` (0600). Losing it loses every keeper the door holds (players who took theirs home keep them). Back it up separately from the data; move it to a KMS before real players arrive.
-- Limits: sessions in total, sessions per address, idle timeout, maximum session length.
-- All player text (fire names, names, the motd) goes through `safeText` before it reaches a terminal.
+- Master key: in `WATCHFIRE_DOOR_MASTER_KEY`, the file `WATCHFIRE_DOOR_MASTER_KEY_FILE` names (Docker), or `<home>/master.key` (0600). Losing it loses every keeper the door holds (players who took theirs home keep them). Back it up separately from the data; move it to a KMS before real players arrive.
+- Limits: sessions in total, sessions per address, one game per connection, one session per keeper, idle timeout, maximum session length; pages once every 5 seconds; bans.
+- All player text (fire names, names, pages, the motd) goes through `safeText` before it reaches a terminal.
+- Connections that never sign in (port scanners, the container's health check) aren't logged.
 - Run it as an unprivileged user (or in a container) with nothing but the game.
 
 ## Not yet
 
-- **Deploy:** a container image and a host. Building the image needs the private `@beaconsgg` registry at build time (a build secret), or the bundled build.
-- **Shared work across sessions:** each session runs its own world read every 30 seconds and its own name lookups. One poller per server list and one name cache would make a busy door much cheaper.
-- **Page a node** (a one-line message to another session).
-- **Ban list** by key fingerprint and address.
-- The domain, and where the master key lives in production.
+- **A public host:** the image and `compose.yaml` are ready and run locally ([deploy.md](deploy.md)); picking a host, the domain, and DNS are next.
+- **The master key in a KMS** rather than a file or environment variable.

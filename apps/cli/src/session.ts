@@ -27,8 +27,10 @@ export interface Session {
   guestHint?: string;
   /** Room type to play; tests and spikes use their own. */
   fireType?: string;
-  /** The fetch Beacon requests go through (the SSH door paces writes for all its players). */
+  /** The fetch Beacon requests go through (the SSH door shares reads and paces writes for all its players). */
   fetch?: typeof fetch;
+  /** The fetch for reads that must be fresh (see ConnectOptions.freshFetch). */
+  freshFetch?: typeof fetch;
   /** The SSH door's extras. Absent when playing locally. */
   door?: Door;
 }
@@ -43,6 +45,24 @@ export interface Door {
   motd?: string;
   /** Keepers only: their recovery phrase, so they can take their keeper home. */
   revealPhrase?(): Promise<string | null>;
+  /**
+   * Keepers only: page another node with one line. `to` is who was on that node when the player
+   * chose them (a node number is reused once they leave). Returns why not, or null once it's sent.
+   */
+  page?(to: OnlineNode, text: string): string | null;
+  /** Hear pages to this node as they arrive. Returns the unsubscribe. */
+  onPage(listener: (page: Page) => void): () => void;
+  /** The last five pages this node has had, oldest first. */
+  pages(): Page[];
+}
+
+/** A one-line message from another node. */
+export interface Page {
+  from: number;
+  name: string;
+  text: string;
+  /** Epoch ms. */
+  at: number;
 }
 
 /** One connected door session, for who's online. */
