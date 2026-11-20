@@ -1,24 +1,22 @@
 # syntax=docker/dockerfile:1.7
 #
-# The Watchfire SSH door. Build from the repo root; the @beaconsgg packages come from a private
-# registry, so the build borrows your npm credentials as a secret (never stored in the image):
+# The Watchfire SSH door. Build from the repo root:
 #
-#   docker build -f apps/door/Dockerfile --secret id=npmrc,src=$HOME/.npmrc -t watchfire-door .
+#   docker build -f apps/door/Dockerfile -t watchfire-door .
 #
 # or `docker compose build` with compose.yaml. The image runs one bundled file on Node: no
-# node_modules, no registry access at run time.
+# node_modules at run time.
 
 # --- build: install, bundle the door into one file, build the website -----------------------------
 FROM node:24-bookworm-slim AS build
 WORKDIR /src
 RUN corepack enable
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json packages/core/
 COPY apps/cli/package.json apps/cli/
 COPY apps/door/package.json apps/door/
 COPY apps/dashboard/package.json apps/dashboard/
-RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
-    --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm -C apps/door run build && pnpm -C apps/dashboard run build

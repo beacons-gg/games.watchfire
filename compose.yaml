@@ -15,8 +15,6 @@ services:
     build:
       context: .
       dockerfile: apps/door/Dockerfile
-      # The @beaconsgg registry is private: the build reads your npm credentials as a secret.
-      secrets: [npmrc]
     image: ${WATCHFIRE_IMAGE:-watchfire-door:latest}
     init: true
     restart: unless-stopped
@@ -70,8 +68,6 @@ services:
     logging: *logging
 
 secrets:
-  npmrc:
-    file: ${NPMRC:-${HOME}/.npmrc}
   # From the environment (.env, or the host's settings page), handed to the containers as files
   # in /run/secrets. `up` stops with "WATCHFIRE_MASTER_KEY ... is not set" until they're there.
   master_key:

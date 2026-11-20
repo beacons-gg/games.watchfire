@@ -9,7 +9,7 @@
     "build": "node build.ts"
   },
   "dependencies": {
-    "@beaconsgg/client-sdk": "^1.1.0",
+    "@beaconsgg/client-sdk": "^1.1.2",
     "@watchfire/core": "workspace:*",
     "ink": "8.0.0",
     "postgres": "3.4.9",

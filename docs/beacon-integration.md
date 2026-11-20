@@ -6,7 +6,7 @@ Everything here was checked against Beacon 1.1 on `9q72.beacons.gg` by `pnpm spi
 
 | | |
 | --- | --- |
-| Server | `https://9q72.beacons.gg` ("Watchfire main"), Beacon 1.1.0 |
+| Server | `https://9q72.beacons.gg` ("Watchfire main"), Beacon 1.1 |
 | Coverage | the whole world (`[""]`) |
 | Access | `open`: anyone may write |
 | Services | `mailbox`, `geocode`. No `places`, no `media` |
@@ -18,7 +18,7 @@ A local server also works: `BEACON=http://localhost:3001 pnpm spike` against the
 
 ## Packages
 
-`@beaconsgg/*` 1.1.0 isn't on public npm. It installs from Beacon's registry, `registry.example.com`, through the project `.npmrc` (`@beaconsgg:registry=…`), with a token for that host in `~/.npmrc`. So everything players run **bundles** the SDK: the CLI is one file, and so is the door in its image. Nobody needs the registry to play or to run a published image.
+`@beaconsgg/client-sdk`, `identity`, `geo`, `jsonlogic-profile` and `protocol-types`, 1.1.2, from npm (Apache-2.0). Everything players run **bundles** them: the CLI is one file, and so is the door in its image.
 
 ## The fire policy
 

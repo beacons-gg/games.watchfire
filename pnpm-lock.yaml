@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@beaconsgg/geo':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@beaconsgg/identity':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@watchfire/core':
         specifier: workspace:*
         version: link:packages/core
@@ -22,8 +22,8 @@ importers:
         version: 4.8.4
     devDependencies:
       '@beaconsgg/client-sdk':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -37,11 +37,11 @@ importers:
   apps/cli:
     devDependencies:
       '@beaconsgg/client-sdk':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@beaconsgg/identity':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@types/react':
         specifier: 19.3.0
         version: 19.3.0
@@ -104,8 +104,8 @@ importers:
   apps/door:
     dependencies:
       '@beaconsgg/client-sdk':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@watchfire/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -138,20 +138,20 @@ importers:
   packages/core:
     dependencies:
       '@beaconsgg/client-sdk':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@beaconsgg/geo':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@beaconsgg/identity':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@beaconsgg/jsonlogic-profile':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@beaconsgg/protocol-types':
-        specifier: ^1.1.0
-        version: 1.1.0(zod@4.6.7)
+        specifier: ^1.1.2
+        version: 1.1.2(zod@4.6.7)
       socket.io-client:
         specifier: ^4.8.4
         version: 4.8.4
@@ -168,30 +168,30 @@ packages:
     resolution: {integrity: sha512-GZdcaU9RV2Gn9SAg1hcsSoQ4nIWZfutPqIvxayUYsOzfBPJioJ+aQIXnMJiGDz+35Gg2pskkPxioYnSblPELEw==}
     engines: {node: '>=18'}
 
-  '@beaconsgg/client-sdk@1.1.0':
-    resolution: {integrity: sha512-T9ySS3QQXdH0CFgs+rTn81LYBANAZuzwZkm6nX10LZGM7KozOKZ1Ha8/AvMjgxsVY6mPQlZcdM2koOueKlq9ag==}
+  '@beaconsgg/client-sdk@1.1.2':
+    resolution: {integrity: sha512-5i0uG+ayTKWARpKg3F8P2ybLu6ZNnH7MuX5TmY3NTIJR++0APfYGIx2UtcD1nsbnbcJeQs50ABb9giUu0XRNDw==}
     engines: {node: '>=22'}
 
-  '@beaconsgg/geo@1.1.0':
-    resolution: {integrity: sha512-7rs8AtkgD0/crJ6ujkALbI7fgh8BijgvrzCghOCcn9HbFWoV3Ao1YGSqM7oGjQLFtrkbjurLwhMQHogBFf0ryw==}
+  '@beaconsgg/geo@1.1.2':
+    resolution: {integrity: sha512-nrrO83qhVQ4xoxjfV2bE0CnYHJQAMvzqTkBzUrJX5SyNFAVxYhALpEff2MU6LOYgjZwp16TkTYFwRPKx0JFFqg==}
     engines: {node: '>=22'}
 
-  '@beaconsgg/identity@1.1.0':
-    resolution: {integrity: sha512-WQSv/P3ou0kvYfBD50Ii5aupYIE3fHei3TUBU88b+x6fE2VosfVlQAMpFfEHd6uonxIYP/MUGxKMMr+EqOs0gA==}
+  '@beaconsgg/identity@1.1.2':
+    resolution: {integrity: sha512-Z5NIu+ofidlIwx8EfiScm1m7qJ0h5XTVJjAwwswGaYzBq6eUVJQXYpPJUrK8jiiRdJrqNrEu6jXrL27yxXQt2Q==}
     engines: {node: '>=22'}
 
-  '@beaconsgg/jsonlogic-profile@1.1.0':
-    resolution: {integrity: sha512-eVtzj9I0IODGJTtRBIHHndavYC2FgcczEk97LgGvpIRqZy38TKrV4V5P5ZaOxosGOhyp481+3AkZ357cPpcAnw==}
+  '@beaconsgg/jsonlogic-profile@1.1.2':
+    resolution: {integrity: sha512-XNoFFiCaEZTNbJWNeHEeMQCCjfzg9iMphI/hSUdRyL40yBlugMvn8iC3ZSoMlf3WtEUKM8hgqH9A1TQ0NQwrYQ==}
     engines: {node: '>=22'}
 
-  '@beaconsgg/protocol-types@1.1.0':
-    resolution: {integrity: sha512-FcgKyiVNYZyjsRp/REjeefoxIiI4nUON/6EcbirKYambBH63m2I2wB8xUQIvCS6Oz70ZpXpPxqxyXJbnFCjWRg==}
+  '@beaconsgg/protocol-types@1.1.2':
+    resolution: {integrity: sha512-9H0BJ6Lv7iqNFZDXXmJbedmrxNZzm2Z3o22nwjYNDzDSvyiXeGJ5DISm+uAWc2ln4j7yN2wuksKXyZYic8QQkQ==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^4.6.7
 
-  '@beaconsgg/scout-interp@1.1.0':
-    resolution: {integrity: sha512-EZBhpBa/aoSoMftQmiXLaaH3/a5cFZ4svAL8Qb+6gT3GViiHlbjSKtN2OfXyQFJDZ05urDl1FBRBV64W2ukZBw==}
+  '@beaconsgg/scout-interp@1.1.2':
+    resolution: {integrity: sha512-anSeI4z0hT92eImc2fxs4edjdgOazJLyQN1WvuSiL7+cy2uo9mRsjwIL0ootSXjL3AVqPQ8KwCBG4mDHb16T3g==}
     engines: {node: '>=22'}
 
   '@emnapi/core@2.0.0-beta.2':
@@ -1138,26 +1138,26 @@ snapshots:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
 
-  '@beaconsgg/client-sdk@1.1.0(zod@4.6.7)':
+  '@beaconsgg/client-sdk@1.1.2(zod@4.6.7)':
     dependencies:
-      '@beaconsgg/geo': 1.1.0(zod@4.6.7)
-      '@beaconsgg/identity': 1.1.0(zod@4.6.7)
-      '@beaconsgg/protocol-types': 1.1.0(zod@4.6.7)
-      '@beaconsgg/scout-interp': 1.1.0(zod@4.6.7)
+      '@beaconsgg/geo': 1.1.2(zod@4.6.7)
+      '@beaconsgg/identity': 1.1.2(zod@4.6.7)
+      '@beaconsgg/protocol-types': 1.1.2(zod@4.6.7)
+      '@beaconsgg/scout-interp': 1.1.2(zod@4.6.7)
       ulid: 2.4.0
     transitivePeerDependencies:
       - zod
 
-  '@beaconsgg/geo@1.1.0(zod@4.6.7)':
+  '@beaconsgg/geo@1.1.2(zod@4.6.7)':
     dependencies:
-      '@beaconsgg/protocol-types': 1.1.0(zod@4.6.7)
+      '@beaconsgg/protocol-types': 1.1.2(zod@4.6.7)
       ngeohash: 0.6.4
     transitivePeerDependencies:
       - zod
 
-  '@beaconsgg/identity@1.1.0(zod@4.6.7)':
+  '@beaconsgg/identity@1.1.2(zod@4.6.7)':
     dependencies:
-      '@beaconsgg/protocol-types': 1.1.0(zod@4.6.7)
+      '@beaconsgg/protocol-types': 1.1.2(zod@4.6.7)
       '@noble/ed25519': 2.3.0
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
@@ -1165,21 +1165,21 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@beaconsgg/jsonlogic-profile@1.1.0(zod@4.6.7)':
+  '@beaconsgg/jsonlogic-profile@1.1.2(zod@4.6.7)':
     dependencies:
-      '@beaconsgg/protocol-types': 1.1.0(zod@4.6.7)
+      '@beaconsgg/protocol-types': 1.1.2(zod@4.6.7)
       json-logic-js: 2.0.5
     transitivePeerDependencies:
       - zod
 
-  '@beaconsgg/protocol-types@1.1.0(zod@4.6.7)':
+  '@beaconsgg/protocol-types@1.1.2(zod@4.6.7)':
     dependencies:
       canonicalize: 2.1.0
       zod: 4.6.7
 
-  '@beaconsgg/scout-interp@1.1.0(zod@4.6.7)':
+  '@beaconsgg/scout-interp@1.1.2(zod@4.6.7)':
     dependencies:
-      '@beaconsgg/protocol-types': 1.1.0(zod@4.6.7)
+      '@beaconsgg/protocol-types': 1.1.2(zod@4.6.7)
     transitivePeerDependencies:
       - zod
 

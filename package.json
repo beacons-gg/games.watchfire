@@ -20,14 +20,14 @@
     "dashboard": "pnpm -C apps/dashboard run dev"
   },
   "devDependencies": {
-    "@beaconsgg/client-sdk": "^1.1.0",
+    "@beaconsgg/client-sdk": "^1.1.2",
     "@types/node": "^26.6.6",
     "esbuild": "0.28.2",
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@beaconsgg/geo": "^1.1.0",
-    "@beaconsgg/identity": "^1.1.0",
+    "@beaconsgg/geo": "^1.1.2",
+    "@beaconsgg/identity": "^1.1.2",
     "@watchfire/core": "workspace:*",
     "socket.io-client": "^4.8.4"
   }

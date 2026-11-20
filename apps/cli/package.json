@@ -17,8 +17,8 @@
     "build": "node build.ts"
   },
   "devDependencies": {
-    "@beaconsgg/client-sdk": "^1.1.0",
-    "@beaconsgg/identity": "^1.1.0",
+    "@beaconsgg/client-sdk": "^1.1.2",
+    "@beaconsgg/identity": "^1.1.2",
     "@types/react": "19.3.0",
     "@watchfire/core": "workspace:*",
     "ink": "8.0.0",

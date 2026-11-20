@@ -11,11 +11,11 @@
     "./tuning": "./src/tuning.ts"
   },
   "dependencies": {
-    "@beaconsgg/client-sdk": "^1.1.0",
-    "@beaconsgg/geo": "^1.1.0",
-    "@beaconsgg/identity": "^1.1.0",
-    "@beaconsgg/jsonlogic-profile": "^1.1.0",
-    "@beaconsgg/protocol-types": "^1.1.0",
+    "@beaconsgg/client-sdk": "^1.1.2",
+    "@beaconsgg/geo": "^1.1.2",
+    "@beaconsgg/identity": "^1.1.2",
+    "@beaconsgg/jsonlogic-profile": "^1.1.2",
+    "@beaconsgg/protocol-types": "^1.1.2",
     "socket.io-client": "^4.8.4",
     "ulid": "^3.0.2",
     "zod": "^4.6.7"

@@ -47,7 +47,7 @@ Backups, Dokploy, keeping data in files, an outside database, running the websit
 
 ## Develop
 
-Node 24 through nvm, and pnpm. The `@beaconsgg/*` packages install from Beacon's package registry (`registry.example.com`, see `.npmrc`), not public npm, so installing needs a token for it in `~/.npmrc`.
+Node 24 through nvm, and pnpm. Everything installs from npm, Beacon's SDK (`@beaconsgg/*`) included.
 
 ```sh
 nvm use

@@ -6,3 +6,10 @@ allowBuilds:
   # ssh2 runs without its optional native crypto add-on.
   ssh2: false
   cpu-features: false
+minimumReleaseAgeExclude:
+  - '@beaconsgg/client-sdk@1.1.2'
+  - '@beaconsgg/geo@1.1.2'
+  - '@beaconsgg/identity@1.1.2'
+  - '@beaconsgg/jsonlogic-profile@1.1.2'
+  - '@beaconsgg/protocol-types@1.1.2'
+  - '@beaconsgg/scout-interp@1.1.2'

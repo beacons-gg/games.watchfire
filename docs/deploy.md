@@ -13,7 +13,7 @@ docker compose up -d --build
 
 **Back up `WATCHFIRE_MASTER_KEY` off the host.** It seals every keeper's recovery phrase and lives nowhere else. Lose it and every keeper is lost. The database password is fixed when `db` first initializes its volume.
 
-The build pulls `@beaconsgg/*` from a private registry, so it needs your `~/.npmrc` as a BuildKit secret (`NPMRC` in `.env` to point elsewhere). It's never stored in the image. Hosts without it should pull a prebuilt image instead: build and push it elsewhere, then set `WATCHFIRE_IMAGE`.
+The build needs only public npm. To run a prebuilt image instead, push it to a registry and set `WATCHFIRE_IMAGE`.
 
 For a LAN-only door, reserve the host's address and don't forward the ports. The door still needs outbound internet to reach the Beacon servers.
 
