@@ -93,3 +93,7 @@ docs/
 ## Credits
 
 City names from [GeoNames](https://www.geonames.org) (CC BY 4.0). Map data from [Natural Earth](https://www.naturalearthdata.com) (public domain).
+
+## License
+
+[Apache License 2.0](LICENSE).

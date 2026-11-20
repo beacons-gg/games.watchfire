@@ -1,5 +1,6 @@
 {
   "name": "@watchfire/dashboard",
+  "license": "Apache-2.0",
   "version": "0.1.0",
   "private": true,
   "description": "The Watchfire website: the game explained, and its world live. Served by the SSH door.",

@@ -1,5 +1,6 @@
 {
   "name": "@watchfire/door",
+  "license": "Apache-2.0",
   "version": "0.1.0",
   "private": true,
   "description": "The Watchfire SSH door: ssh in and play, nothing to install.",
