@@ -10,14 +10,30 @@ import { connect, keeperName } from "@watchfire/core";
 const SERVER = process.env.BEACON ?? "https://9q72.beacons.gg";
 
 const SEEDS = [
-  { name: "Harbor Light", at: { lat: 47.6097, lng: -122.3422 }, logs: 3, keepers: 2, warm: 1 }, // Seattle
-  { name: "Cedar Hollow", at: { lat: 47.9445, lng: -122.3046 }, logs: 6, keepers: 3, warm: 2 }, // Mukilteo
-  { name: "The Night Market", at: { lat: 35.6762, lng: 139.6503 }, logs: 1, keepers: 1, warm: 0 }, // Tokyo
-  { name: "Lantern Point", at: { lat: 55.9553, lng: -3.1822 }, logs: 2, keepers: 2, warm: 1 }, // Edinburgh
-  { name: "Southern Cross", at: { lat: -33.8568, lng: 151.2153 }, logs: 9, keepers: 4, warm: 3 }, // Sydney
-  { name: "Old Mill", at: { lat: 64.1466, lng: -21.9426 }, logs: 12, keepers: 3, warm: 2 }, // Reykjavik
-  { name: "Desert Star", at: { lat: 31.6295, lng: -7.9811 }, logs: 4, keepers: 2, warm: 0 }, // Marrakesh
-  { name: "Riverside Camp", at: { lat: -34.6037, lng: -58.3816 }, logs: 5, keepers: 3, warm: 1 }, // Buenos Aires
+  // Places with fire in the name.
+  { name: "The Door to Hell", at: { lat: 40.2525, lng: 58.4397 }, logs: 12, keepers: 4, warm: 4 }, // Darvaza gas crater, Turkmenistan
+  { name: "Land of Fire", at: { lat: 40.5019, lng: 49.8911 }, logs: 9, keepers: 3, warm: 3 }, // Yanar Dag, Baku
+  { name: "Chimaera Flames", at: { lat: 36.4316, lng: 30.458 }, logs: 6, keepers: 3, warm: 2 }, // Yanartas, Turkey
+  { name: "Furnace Creek", at: { lat: 36.457, lng: -116.867 }, logs: 4, keepers: 2, warm: 1 }, // Death Valley
+  { name: "Tierra del Fuego", at: { lat: -54.8019, lng: -68.303 }, logs: 7, keepers: 3, warm: 1 }, // Ushuaia
+  { name: "The Fires of Hell", at: { lat: 63.445, lng: 10.905 }, logs: 3, keepers: 2, warm: 2 }, // Hell, Norway
+  { name: "Cinderford Hearth", at: { lat: 51.824, lng: -2.499 }, logs: 2, keepers: 1, warm: 0 }, // Cinderford, England
+  { name: "Burnley Beacon", at: { lat: 53.7893, lng: -2.2405 }, logs: 5, keepers: 3, warm: 1 }, // Burnley, England
+  { name: "Fire Island Light", at: { lat: 40.648, lng: -73.158 }, logs: 1, keepers: 1, warm: 0 }, // Fire Island, New York
+  { name: "Smokey Point Watch", at: { lat: 48.152, lng: -122.184 }, logs: 8, keepers: 3, warm: 2 }, // Smokey Point, Washington
+  { name: "Hell's Kitchen", at: { lat: 40.7638, lng: -73.9918 }, logs: 3, keepers: 2, warm: 1 }, // Manhattan
+  // Big cities.
+  { name: "Thames Lantern", at: { lat: 51.5072, lng: -0.1276 }, logs: 6, keepers: 4, warm: 2 }, // London
+  { name: "Shibuya Brazier", at: { lat: 35.6595, lng: 139.7005 }, logs: 2, keepers: 2, warm: 1 }, // Tokyo
+  { name: "Copacabana Bonfire", at: { lat: -22.9711, lng: -43.1822 }, logs: 10, keepers: 4, warm: 3 }, // Rio de Janeiro
+  { name: "Lagos Lamplight", at: { lat: 6.4541, lng: 3.3947 }, logs: 4, keepers: 2, warm: 0 }, // Lagos
+  { name: "Marine Drive Diya", at: { lat: 18.944, lng: 72.823 }, logs: 5, keepers: 2, warm: 2 }, // Mumbai
+  { name: "Nile Hearth", at: { lat: 30.0444, lng: 31.2357 }, logs: 3, keepers: 1, warm: 1 }, // Cairo
+  { name: "Zocalo Torch", at: { lat: 19.4326, lng: -99.1332 }, logs: 7, keepers: 3, warm: 1 }, // Mexico City
+  { name: "Table Mountain Beacon", at: { lat: -33.9628, lng: 18.4098 }, logs: 9, keepers: 4, warm: 2 }, // Cape Town
+  { name: "Han River Embers", at: { lat: 37.5665, lng: 126.978 }, logs: 1, keepers: 1, warm: 1 }, // Seoul
+  { name: "Harbour Flare", at: { lat: -33.8568, lng: 151.2153 }, logs: 11, keepers: 4, warm: 3 }, // Sydney
+  { name: "Lakeshore Fire", at: { lat: 43.6532, lng: -79.3832 }, logs: 4, keepers: 2, warm: 1 }, // Toronto
 ];
 
 const wf = await connect({ servers: [SERVER] });
