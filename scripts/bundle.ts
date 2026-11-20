@@ -1,12 +1,13 @@
 // One way to bundle a Watchfire app into a single .mjs file that runs on Node with nothing
-// installed: the CLI (`npx watchfire`) and the SSH door's container image both use it.
+// installed: the CLI (and its executables) and the SSH door's container image both use it.
 import { fileURLToPath } from "node:url";
-import { build, type BuildOptions } from "esbuild";
+import { build, type BuildOptions, type Metafile } from "esbuild";
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
-export async function bundle(entry: string, outfile: string, extra: BuildOptions = {}): Promise<void> {
-  await build({
+/** Bundle `entry` into `outfile`. Resolves to what went in (esbuild's metafile). */
+export async function bundle(entry: string, outfile: string, extra: BuildOptions = {}): Promise<Metafile> {
+  const result = await build({
     entryPoints: [entry],
     outfile,
     bundle: true,
@@ -31,6 +32,8 @@ export async function bundle(entry: string, outfile: string, extra: BuildOptions
       ].join(" "),
     },
     logLevel: "info",
+    metafile: true,
     ...extra,
   });
+  return result.metafile!;
 }

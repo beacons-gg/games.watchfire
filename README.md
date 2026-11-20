@@ -16,7 +16,7 @@ ssh -p 2222 <the door's address>
 
 Your ssh key is your keeper. Without a key you come in as a guest who can watch but not lay logs. The rules, the keys and how to get set up on a Mac, Windows or a phone are in [docs/how-to-play.md](docs/how-to-play.md).
 
-Locally, from a checkout: `pnpm play` (see [Develop](#develop)). The game isn't on npm yet.
+On your own computer: download the game for Windows, macOS or Linux from the [releases](https://github.com/beacons-gg/watchfire/releases), unpack it and run `watchfire` in a terminal. Nothing else to install. Your keeper lives in your home folder, as with any key of yours. From a checkout: `pnpm play` (see [Develop](#develop)).
 
 ## Run a door
 
@@ -60,6 +60,12 @@ pnpm door             # the SSH door on :2222 (ssh -p 2222 localhost) and its we
 pnpm dashboard        # the website with live reload on :5173, reading a running door's /api/world
 pnpm build            # apps/cli/dist/watchfire.mjs (one self-contained file) and the website
 ```
+
+### Releasing
+
+Set `version` in `apps/cli/package.json`, commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`. The [release workflow](.github/workflows/release.yml) checks the tag matches, runs the tests, builds executables for Windows, macOS (Apple silicon and Intel) and Linux (x64 and ARM) with Bun, and publishes them as a GitHub release. (A job that runs each one on its own OS first is in the workflow, switched off for now.) A tag with a suffix (`v0.2.0-rc.1`) makes a pre-release. To build the same archives locally: `pnpm -C apps/cli run build && scripts/package-cli.sh 0.2.0`.
+
+The macOS builds are ad-hoc signed, not with an Apple Developer ID, so players unblock them once (the release notes say how). Signing and notarizing is a later step.
 
 `WATCHFIRE_FIRE_TYPE` fires are only for testing: don't hand that setting to playtesters, or their fires won't show up for anyone else.
 

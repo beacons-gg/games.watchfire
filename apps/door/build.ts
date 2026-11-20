@@ -1,5 +1,5 @@
 // Bundle the door into one file (the SDK, the game, ssh2 and the city list included), so its
-// container image needs nothing but Node: no install, no private registry.
+// container image needs nothing but Node: no install.
 import { fileURLToPath } from "node:url";
 import { bundle } from "../../scripts/bundle.ts";
 

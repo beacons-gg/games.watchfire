@@ -6,8 +6,10 @@ import { App } from "./app.tsx";
 import { configDir, detectColorDepth, fileKeeperStore, fileKeyStore } from "./local.ts";
 import { emptyKeeper, localDay, memoryKeeperStore, type KeeperState, type Session } from "./session.ts";
 import { createInterface } from "node:readline/promises";
+import pkg from "../package.json" with { type: "json" };
 
-const VERSION = "0.1.0";
+// From package.json, so a release tag has one number to match.
+const VERSION = pkg.version;
 
 /** A watch-only session starts from the keeper's watch place and server list (pins included). */
 const guestStart = ({ watch, servers }: KeeperState): KeeperState => ({

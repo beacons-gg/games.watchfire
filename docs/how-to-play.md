@@ -10,6 +10,8 @@ The website (the door's address, port 8080) shows the same world live: the map o
 
 You visit the game over **ssh**, a standard way to reach another computer. Nothing to install on a Mac, Linux or Windows 10/11.
 
+(You can also play from your own computer: download Watchfire for Windows, Mac or Linux from the game's releases page, unpack it, and run `watchfire` in a terminal. Your keeper is then kept on your computer instead of at a door. The rest of this guide is the same, minus who's online and pages, which only a door has.)
+
 1. **Open a terminal.** Mac: Spotlight, type *Terminal*. Windows: the Windows key, type *PowerShell*. Phone or tablet: install an ssh app such as **Termius**.
 2. **The first time only, make a key:** `ssh-keygen -t ed25519`, then press Enter at each question. (In Termius: Keychain → Keys → Generate.)
 3. **Come in:** `ssh -p 2222 <the door's address>`, as the website shows it. The first time, ssh asks whether to trust the door: type `yes`.
@@ -37,7 +39,7 @@ The game asks **where you keep watch**: type a town or city and pick it from the
 | **Keepers** | Lay a log on a fire and you become one of its keepers. |
 | **Embers** | Once a fire holds **5 logs**, each of its keepers may take **one ember** (**E** at the fire). Embers are your record of the fires you helped keep: see them under **Y**ou. |
 | **Ashes** | When a fire goes dark, its keepers can **rake** their logs back from the ashes (**R**) for two days: a record of the fires they saw to the end. |
-| **Warm your hands** | Anyone, keeper or not, can warm their hands at a fire once (**W** at the fire). It's free, and the fire shows how many have stopped by. |
+| **Warm your hands** | Anyone, keeper or not, can warm their hands at a fire once (**W** at the fire), even players of other Beacon games passing by. It's free, and the fire shows how many have stopped by. |
 
 **Working together.** One keeper's three logs a day add 12 hours, but a day is 24 hours: alone you can carry a fire into tomorrow, not forever. **Two keepers** keep pace with the clock. Pick fires other people are keeping, and tell them with a page.
 
