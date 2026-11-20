@@ -5,7 +5,10 @@ import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { BurnBar, cell, Frame, grow, Keys, Message, pointer, stepCursor, TimeLeft, useSize } from "../ui.tsx";
 
-/** Every fire, the closest to going out first; ash at the bottom. F narrows it to one server. */
+/**
+ * Every burning fire, the closest to going out first; then the dark ones this keeper can still
+ * rake (a dark fire is nothing to anyone else). F narrows it to one server.
+ */
 export function World(props: { game: Game; session: Session; open(id: string): void; back(): void }) {
   const { game, session } = props;
   const [sel, setSel] = useState(0);
@@ -17,7 +20,8 @@ export function World(props: { game: Game; session: Session; open(id: string): v
   const nearW = grow(12, width, 0.2, 30);
   const serverW = grow(12, width, 0.15, 26);
   const hosts = game.servers.filter((s) => s.state === "ok" && s.host).map((s) => s.host!);
-  const list = only ? game.fires.filter((f) => hostOf(f.id) === only) : game.fires;
+  const shown = game.fires.filter((f) => f.phase === "burning" || game.blocker("rake", f) === null);
+  const list = only ? shown.filter((f) => hostOf(f.id) === only) : shown;
   const watch = game.keeper.watch;
 
   useInput((input, key) => {
@@ -55,7 +59,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
       }
     >
       <Text color="#a8a29e" wrap="truncate-end">
-        {burning} burning · {list.length - burning} dark · closest to going out first
+        {burning} burning{list.length > burning ? ` · ${list.length - burning} for you to rake` : ""} · closest to going out first
         {only ? (
           <Text color="#fde68a"> · only {serverLabel(game.servers.find((s) => s.host === only) ?? { origin: only })}</Text>
         ) : game.multiServer ? (

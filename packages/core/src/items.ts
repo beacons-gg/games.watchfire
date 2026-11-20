@@ -25,6 +25,13 @@ export function mintLog(wallet: Wallet, opts: { kindling?: boolean } = {}): Opaq
   );
 }
 
+/** The cinder pool a fire is lit with, one per possible keeper: what raking the ashes hands out. */
+export function mintCinders(wallet: Wallet, count: number, fireName: string): OpaqueItem[] {
+  return Array.from({ length: count }, (_, i) =>
+    mintItem(wallet, { kind: "cinder", fire: fireName, n: i + 1 }, { class: "cinder" }),
+  );
+}
+
 /** The ember pool a fire is lit with: one per possible keeper. */
 export function mintEmbers(wallet: Wallet, count: number, fireName: string): OpaqueItem[] {
   return Array.from({ length: count }, (_, i) =>

@@ -119,9 +119,18 @@ expect("the clock says ash", fire.phase === "ash");
 const lateEmber = await wf.collectEmber(alex, id);
 expect("no embers from ash", !lateEmber.ok, lateEmber.error);
 const rake = await wf.rakeAshes(alex, id);
-expect("alex rakes the ashes", rake.ok, rake.error);
+expect("alex rakes the ashes, and gets a cinder", rake.ok && !!rake.cinder, rake.ok ? JSON.stringify((rake.cinder as any)?.birth) : rake.error);
 const rake2 = await wf.rakeAshes(alex, id);
-log(`      alex rakes again: ${rake2.ok ? "ok" : rake2.error}`);
+log(`      alex rakes again: ${rake2.ok ? "ok" : rake2.error}${rake2.cinder ? " (another cinder!)" : ""}`);
+expect("alex's second rake gives no second cinder", !rake2.cinder);
+// The cinders keep the ashes open for every keeper (Beacon would close a dark room the moment
+// nobody was owed anything), until the last one rakes.
+expect("the ashes stay for the keepers still to rake", (await wf.fire(id))?.phase === "ash");
+for (const [who, w] of [["the lighter", keeper], ["jen", jen]] as const) {
+  const r = await wf.rakeAshes(w, id);
+  expect(`${who} rakes too`, r.ok, r.error);
+}
+expect("once every keeper has raked, the fire is gone", (await wf.fire(id)) === null);
 
 log(`live deltas seen: ${deltas.length} [${deltas.join(", ")}]`);
 sock.disconnect();

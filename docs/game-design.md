@@ -21,7 +21,7 @@
 | A keeper (anyone who added a log) may collect one ember | once the fire holds 5 logs | server |
 | Embers per keeper per fire | 1 | server |
 | Feeding, embers | only while burning | server |
-| Raking the ashes (your logs back, as a record) | only once it's ash, once per keeper, for 2 days | server |
+| Raking the ashes (your logs back, and a cinder) | only once it's ash, once per keeper, for 2 days | server |
 | Warm your hands | anyone, from any Beacon game, once per fire | server |
 
 Lighting a fire costs a log, so "light a new one" and "feed one" draw from the same three.
@@ -54,9 +54,9 @@ Fire names come from the lighter ("The Lantern on Calton Hill"), defaulting to "
 
 ## Screens
 
-- **Main:** an animated fire header, the counts, the fires nearest your watch place, logs left today, what happened since your last visit, and the keys.
+- **Main:** an animated fire header, the counts, the fires nearest your watch place, logs left today, what happened since your last visit, and the keys. When you have logs lying in the ashes of a fire you kept, a line says so and **A** opens it.
 - **Fire:** a fire's name, place, server, burn bar, keepers, warmth and embers taken, and its moves (feed, warm hands, take an ember, rake the ashes).
-- **World:** every fire, closest to going out first, with its server; **F** filters to one server.
+- **World:** every burning fire, closest to going out first, with its server; then the dark fires you can still rake. A dark fire you have nothing to collect from isn't listed. **F** filters to one server.
 - **Light:** name a new fire and pick its place. When more than one of your servers covers the place, it asks which one holds the fire, defaulting to the one that covers it most closely.
 - **News:** what happened since your last visit.
 - **You:** your name (your Beacon profile name, or your keeper name until you set one), your record, your embers (one per fire you tended past 5 logs: the long-term score), and kilometres or miles. At a door, also your keeper's recovery phrase, to take it home.
@@ -78,7 +78,9 @@ On login, and every 30 seconds after, the client reads the fires in view, compar
 
 ## Embers and ashes
 
-Embers are the collectible: proof you helped a fire reach 5 logs. Each ember's signed `birth` names its fire. Raking the ashes returns your own logs from a dead fire, a record of fires you saw to the end. Both show on your profile screen.
+Embers are the collectible: proof you helped a fire reach 5 logs. Each ember's signed `birth` names its fire. Raking the ashes returns your own logs from a dead fire, a record of fires you saw to the end, and hands you a cinder from its pool. Both show on your profile screen.
+
+The cinders are also what keep a dark fire around for its keepers. Beacon closes a room in its last phase as soon as nobody is owed anything from its pools, so before cinders a fire that never reached 5 logs, or whose keepers had all taken their embers, vanished the moment it went dark and nobody could rake it. Every keeper who hasn't raked is owed a cinder, so the ashes now stay until the last keeper rakes, or for 2 days.
 
 ## Warm hands
 

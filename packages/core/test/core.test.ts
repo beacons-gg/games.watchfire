@@ -103,8 +103,10 @@ test("fire policy formulas: logs count items, out time follows logs, ember thres
   const placedAt = 1_800_000_000;
   const outAt = evaluate(p.derived.outAt, { placedAt, logs });
   assert.equal(outAt, placedAt + FIRE_TUNING.baseSec + 3 * FIRE_TUNING.secPerLog);
-  assert.equal(evaluate(p.grant.when, { logs: FIRE_TUNING.emberAt - 1 }), false);
-  assert.equal(evaluate(p.grant.when, { logs: FIRE_TUNING.emberAt }), true);
+  assert.equal(evaluate(p.grant[0].when, { logs: FIRE_TUNING.emberAt - 1 }), false);
+  assert.equal(evaluate(p.grant[0].when, { logs: FIRE_TUNING.emberAt }), true);
+  // Raking hands out a cinder, always: what keeps the ashes open for every keeper.
+  assert.deepEqual(p.grant[1], { op: "claim", from: "cinders", count: 1 });
 });
 
 test("fire policy: warming hands is open to every game, nothing else is", () => {

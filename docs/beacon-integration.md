@@ -41,13 +41,16 @@ Built by `firePolicy()` in `packages/core/src/policy.ts`:
   },
   accept: { class: ["log"], minLevels: { log: 1 }, capacity },
   maxContributors: capacity,
-  grant: { op: "collect", from: "embers", count: 1, when: { ">=": [{ var: "logs" }, emberAt] } },
+  grant: [
+    { op: "collect", from: "embers", count: 1, when: { ">=": [{ var: "logs" }, emberAt] } },
+    { op: "claim", from: "cinders", count: 1 },   // keeps the ashes open; see the gotchas
+  ],
   onEmpty: "close",
   claimTtl: "1d",
 }
 ```
 
-Placed with `initialPools: { embers: [...capacity embers minted by the lighter] }`, then the lighter contributes the kindling log (`birth.kindling: true`).
+Placed with `initialPools: { embers: [...], cinders: [...] }` (`capacity` of each, minted by the lighter), then the lighter contributes the kindling log (`birth.kindling: true`).
 
 ## What the server enforces and what it doesn't
 
@@ -60,7 +63,8 @@ Placed with `initialPools: { embers: [...capacity embers minted by the lighter] 
 | Fire life capped | server (`capacity`) | yes |
 | Ember only for keepers, past the threshold, once each | server (role, `when`, one draw per pool) | stranger `denied`; second collect grants nothing |
 | No embers from ash | server (`phase`) | refused `phase` |
-| Rake once, only in ash | server | second rake `gone` |
+| Rake once, only in ash, with a cinder | server | second rake `gone`, no second cinder |
+| The ashes stay until every keeper has raked, or `claimTtl` | server (the cinder grant, `onEmpty: "close"`) | yes: they stay while a keeper hasn't raked, and close after the last one |
 | Warm hands once per player per target | server (reaction ledger) | the repeat answers `ok` but adds nothing |
 | Other games may warm hands and nothing else | server (`games` on `react` only) | another game's log and ember are refused `gameNotAccepted` (on a server that admits other games) |
 | 3 logs a day | **client only** | n/a |
@@ -74,6 +78,7 @@ Anything only the client enforces is cheatable by a modified client. The design 
 - **`count` needs a key.** `{ count: [{ var: "contents" }] }` isn't valid. `count` takes a level key and counts only the items with an integer at that key: `{ count: [{ var: "contents" }, "log"] }`. Every log therefore carries `match.levels.log = 1`.
 - **A reaction's `target` must be an item in the room or an account DID.** The room id and arbitrary strings answer `gone`. Warm hands targets the fire's kindling log.
 - **`summary.phase` in discovery lags.** It's the stored phase, updated only by the next op. Judge burning versus ash by the clock against `state.outAt` (`readFire` does).
+- **A dark room closes the moment nobody is owed a grant.** With `onEmpty: "close"`, a room in its last phase closes once every contributor has claimed, *or* as soon as nobody is owed anything from a grant pool; only otherwise does it wait out `claimTtl`. With embers as the only grant, a fire that never reached `emberAt` logs, or whose keepers had all taken their embers, closed the instant it went dark, and raking answered `expired`. The fix is a grant on `claim` itself (a cinder each): every keeper who hasn't raked is owed one, so the ashes stay until the last keeper rakes or `claimTtl` passes. Fires lit before the change still close early.
 - **Discovery summaries carry no name or out time.** They hold only `count`, `capacity` and `phase`, so listing fires costs one `resolveRoom` per fire. That's fine at hundreds of fires (600 reads a minute per address) and calls for an indexer beyond that.
 - **Discovery accepts precision-1 cells.** The 32 cells `0…z` cover the world in one read (`WORLD_CELLS`). The live map channel needs precision-5 cells, at most 256 per socket, so a world view follows individual rooms (`subscribeRoom`, 256 per socket) instead.
 - **Live deltas start after the subscription connects.** The spike missed the first ops. Always take a baseline with `resolveRoom` after subscribing and fold deltas on top, as Beacon's live-updates guide says.

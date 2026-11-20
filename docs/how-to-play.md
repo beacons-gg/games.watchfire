@@ -38,7 +38,7 @@ The game asks **where you keep watch**: type a town or city and pick it from the
 | **Full** | A fire holds **12 logs** at most, so every fire goes dark within **60 hours**. Someone always has to light the next one. |
 | **Keepers** | Lay a log on a fire and you become one of its keepers. |
 | **Embers** | Once a fire holds **5 logs**, each of its keepers may take **one ember** (**E** at the fire). Embers are your record of the fires you helped keep: see them under **Y**ou. |
-| **Ashes** | When a fire goes dark, its keepers can **rake** their logs back from the ashes (**R**) for two days: a record of the fires they saw to the end. |
+| **Ashes** | When a fire goes dark, its keepers can **rake** their logs back from the ashes (**R**) for two days, and find a cinder with them: a record of the fires they saw to the end. The main screen tells you when you have ashes to rake (**A** opens the fire), and they're listed at the bottom of the World. |
 | **Warm your hands** | Anyone, keeper or not, can warm their hands at a fire once (**W** at the fire), even players of other Beacon games passing by. It's free, and the fire shows how many have stopped by. |
 
 **Working together.** One keeper's three logs a day add 12 hours, but a day is 24 hours: alone you can carry a fire into tomorrow, not forever. **Two keepers** keep pace with the clock. Pick fires other people are keeping, and tell them with a page.
@@ -50,7 +50,8 @@ The game asks **where you keep watch**: type a town or city and pick it from the
 | On the main screen | |
 | --- | --- |
 | **1**–**9** | Open one of the fires listed |
-| **W** | The whole world, closest to going out first |
+| **W** | The whole world, closest to going out first (and any ashes you can rake) |
+| **A** | Open a dark fire whose ashes you can rake (shown only when there's one) |
 | **L** | Light a new fire |
 | **N** | The watch log |
 | **Y** | You: your name, embers and record (**N** there to choose your name, **U** for miles or kilometres) |

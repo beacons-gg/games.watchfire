@@ -9,7 +9,11 @@ import { WARM, type FireTuning } from "./tuning.ts";
  * - Only items of class `log` with `levels.log >= 1` get in. `logs` counts items, not levels,
  *   so a forged "huge log" still counts once. `capacity` caps the fire's whole life.
  * - Each keeper (contributor) may collect one ember once the fire holds `emberAt` logs.
- * - In ash, each keeper may rake their logs back once, as a record of fires they tended.
+ * - In ash, each keeper may rake their logs back once, as a record of fires they tended, and gets
+ *   a cinder with them. The cinders are what keep a dark fire open for raking: Beacon closes a room
+ *   in its last phase as soon as nobody is owed a grant, so without them a fire that never reached
+ *   `emberAt` logs, or whose keepers all took their embers, would vanish the moment it went dark.
+ *   With them it stays until every keeper has raked, or `claimTtl` after it went dark.
  * - Anyone may warm their hands once per target (the kindling log), from any Beacon game: `react`
  *   is the one op open to other games. Everything else is Watchfire's alone.
  *
@@ -33,7 +37,10 @@ export function firePolicy(t: FireTuning, type: string): Policy {
     },
     accept: { class: ["log"], minLevels: { log: 1 }, capacity: t.capacity },
     maxContributors: t.capacity,
-    grant: { op: "collect", from: "embers", count: 1, when: { ">=": [{ var: "logs" }, t.emberAt] } },
+    grant: [
+      { op: "collect", from: "embers", count: 1, when: { ">=": [{ var: "logs" }, t.emberAt] } },
+      { op: "claim", from: "cinders", count: 1 },
+    ],
     onEmpty: "close",
     claimTtl: t.claimTtl,
   } as Policy;

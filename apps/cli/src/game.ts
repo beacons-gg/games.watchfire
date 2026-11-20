@@ -434,7 +434,9 @@ export function useGame(session: Session): Game {
           if (!r.ok) return refusalText(r.error, "claim");
           const k = keeperRef.current;
           await saveKeeper({ ...k, raked: [...new Set([...k.raked, id])] });
-          return "You rake the ashes and find your logs, charred black. A keepsake.";
+          return r.cinder
+            ? "You rake the ashes and find your logs, charred black, and a cinder still warm. Keepsakes."
+            : "You rake the ashes and find your logs, charred black. A keepsake.";
         },
         { id, move: "rake" },
       ),

@@ -11,7 +11,7 @@ import { WORLD_CELLS } from "@beaconsgg/geo";
 import { signRoomProvenance, walletMinter, type Wallet } from "@beaconsgg/identity";
 import { admittedGames, enforcesAccess, type LatLng } from "@beaconsgg/protocol-types";
 import { ulid } from "ulid";
-import { mintEmbers, mintLog } from "./items.ts";
+import { mintCinders, mintEmbers, mintLog } from "./items.ts";
 import { firePolicy } from "./policy.ts";
 import { readOnlyText, uncoveredText } from "./copy.ts";
 import { hostOf, readFire, type FireView, type RoomLike } from "./fire.ts";
@@ -60,7 +60,8 @@ export interface Watchfire {
   collectEmber(wallet: Wallet, fireId: string): Promise<OpOutcome & { ember?: unknown }>;
   /** `kindling` saves a room read when the caller already knows the fire's kindling log. */
   warmHands(wallet: Wallet, fireId: string, kindling?: string): Promise<OpOutcome>;
-  rakeAshes(wallet: Wallet, fireId: string): Promise<OpOutcome>;
+  /** Your logs back from a dark fire, and a cinder (fires lit before cinders give none). */
+  rakeAshes(wallet: Wallet, fireId: string): Promise<OpOutcome & { cinder?: unknown }>;
   fire(fireId: string): Promise<FireView | null>;
   /**
    * Every fire the readable servers hold in `cells` (geohashes; `WORLD_CELLS` is the world), the
@@ -308,7 +309,7 @@ export async function connect(opts: ConnectOptions): Promise<Watchfire> {
         location: spot,
         policy,
         name: name.slice(0, 64),
-        initialPools: { embers: mintEmbers(wallet, tuning.capacity, name) },
+        initialPools: { embers: mintEmbers(wallet, tuning.capacity, name), cinders: mintCinders(wallet, tuning.capacity, name) },
       });
       if (!placed.ok || !placed.id) {
         const err = new Error(`the fire would not light: ${placed.error} ${placed.message ?? ""}`) as Error & { code?: string };
@@ -339,7 +340,9 @@ export async function connect(opts: ConnectOptions): Promise<Watchfire> {
     },
 
     async rakeAshes(wallet, id) {
-      return outcome(await client.sendOpWithRetry(writeOrigin(id), wallet, id, "claim", {}));
+      const r = await client.sendOpWithRetry(writeOrigin(id), wallet, id, "claim", {});
+      const granted = (r as any).result?.granted as unknown[] | undefined;
+      return { ...outcome(r), cinder: granted?.[0] };
     },
 
     async fires(cells) {

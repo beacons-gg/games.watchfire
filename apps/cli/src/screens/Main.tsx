@@ -10,8 +10,13 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
   const { game, session } = props;
   const { width, height } = useSize();
   const flameRows = height >= 40 ? 8 : height >= 30 ? 6 : 4;
+  // Dark fires this keeper can still rake (the most recent first): the main list shows only
+  // burning fires, so this is the way back to them.
+  const ashes = game.fires
+    .filter((f) => f.phase === "ash" && game.blocker("rake", f) === null)
+    .sort((a, b) => b.outAt - a.outAt);
   // Rows left for the fire list and the news after everything fixed on the screen.
-  const free = height - 15 - flameRows - (game.watchUncovered ? 1 : 0);
+  const free = height - 15 - flameRows - (game.watchUncovered ? 1 : 0) - (ashes.length ? 1 : 0);
   const listRows = Math.max(3, Math.min(9, free));
   const newsRows = Math.max(1, free - listRows + 1);
 
@@ -30,6 +35,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
     const k = input.toLowerCase();
     const n = Number(input);
     if (n >= 1 && n <= nearest.length) return props.open(nearest[n - 1]!.f.id);
+    if (k === "a" && ashes.length) return props.open(ashes[0]!.id);
     if (k === "w") return props.go("world");
     if (k === "l") return props.go("light");
     if (k === "n") return props.go("news");
@@ -56,6 +62,7 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
         <Keys
           keys={[
             ...(nearest.length ? [[nearest.length === 1 ? "1" : `1-${nearest.length}`, " visit"] as [string, string]] : []),
+            ...(ashes.length ? [["A", "shes"] as [string, string]] : []),
             ["W", "orld"],
             ["L", "ight", game.isGuest],
             ["N", "ews"],
@@ -109,6 +116,12 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
           </>
         )}
       </Text>
+      {ashes.length ? (
+        <Text color="#fde68a" wrap="truncate-end">
+          Your logs lie in the ashes of {safeText(ashes[0]!.name)}
+          {ashes.length > 1 ? ` and ${ashes.length - 1} more` : ""}. Press A to rake them out.
+        </Text>
+      ) : null}
       {game.watchUncovered && watch ? (
         <Text color="#fde68a" wrap="truncate-end">
           {uncoveredText(watch.name)} (S)
