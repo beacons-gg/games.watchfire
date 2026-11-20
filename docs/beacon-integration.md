@@ -12,13 +12,13 @@ Everything here was checked against Beacon 1.1 on `9q72.beacons.gg` by `pnpm spi
 | Services | `mailbox`, `geocode`. No `places`, no `media` |
 | Game slug | **`watchfire-door`**, the only game this server admits. Constant: `GAME_SLUG` |
 | Room types | `watchfire` for real fires, `watchfire-spike` for spikes and tests |
-| CORS | not open to other origins yet. The dashboard needs its origin added to `BEACON_CORS_ORIGINS` |
+| CORS | not open to other origins. Not needed: the website reads the world through its door (`/api/world`) |
 
 A local server also works: `BEACON=http://localhost:3001 pnpm spike` against the compose file from Beacon's [Quickstart](https://beacons.gg/docs/quickstart.md).
 
 ## Packages
 
-`@beaconsgg/*` 1.1.0 isn't on public npm. It installs from `registry.example.com` through the project `.npmrc` (`@beaconsgg:registry=…`). Your token for that host lives in `~/.npmrc`. Anything we publish for players (the CLI) must **bundle** the SDK, or installs fail for everyone without registry access.
+`@beaconsgg/*` 1.1.0 isn't on public npm. It installs from Beacon's registry, `registry.example.com`, through the project `.npmrc` (`@beaconsgg:registry=…`), with a token for that host in `~/.npmrc`. So everything players run **bundles** the SDK: the CLI is one file, and so is the door in its image. Nobody needs the registry to play or to run a published image.
 
 ## The fire policy
 
@@ -80,12 +80,12 @@ Anything only the client enforces is cheatable by a modified client. The design 
 
 ## Untrusted text
 
-Fire names, and later mail, are written by other players and shown in terminals. **Strip control characters and ANSI escape sequences from all player text before rendering it.** Otherwise a fire named `\x1b]52;…` could write to a player's clipboard or rewrite their screen. This applies to the CLI, the SSH door and the dashboard (HTML-escape there).
+Fire names, and later mail, are written by other players and shown in terminals. **Strip control characters and ANSI escape sequences from all player text before rendering it.** Otherwise a fire named `\x1b]52;…` could write to a player's clipboard or rewrite their screen. This applies to the CLI, the SSH door and the website (HTML-escape there).
 
 ## Identity
 
 - The local CLI uses `loadOrCreateWallet` with a file-backed store, `~/.config/watchfire/keeper-key.json` (mode 0600, like an SSH private key), so there's no passphrase prompt. The SDK warns that this entry holds the recovery phrase in plain text; we accept that for a game key, the same way `~/.ssh` does. `watchfire phrase` reveals the phrase and `watchfire import` restores one. An OS-keychain store is a later option.
-- Players appear under a stable two-word name made from their account DID ("Quiet Heron"), so the game never has to read profiles. Publishing real profiles with display names can come later.
+- Players without a profile name appear under a stable two-word name made from their account DID ("Quiet Heron"). See [Names and profiles](#names-and-profiles).
 - The SSH door holds wallets for its players. See [ssh-door.md](ssh-door.md#identity).
 - A player's account is the same `did:key` on every Beacon server, so the phrase moves a player between the local CLI and the door.
 
@@ -134,11 +134,7 @@ From Beacon's [limits](https://beacons.gg/docs/limits.md) defaults:
 | Signed writes per **address** | 120/min | the SSH door: all door players share one IP |
 | Room ops per account | 120/min | fine |
 | Reactions per account | 60/min | fine |
-| Discovery and room reads per address | 600/min | the dashboard and world view |
+| Discovery and room reads per address | 600/min | the door, which reads once for all its players and its website |
 | Rooms per socket | 256 | live world view |
 | Room or scout name | 64 characters | fire names |
 | Mail body | 256 bytes | one-liners |
-
-## Test leftovers on 9q72
-
-The spikes leave `watchfire-spike` rooms on the server. Fires close a day after going out (`claimTtl`). One probe room from the first session (`01M7RXC7XH9A0E4HYDG1GJ2CQG`) has no lifecycle and stays until an operator removes it from the console.

@@ -12,7 +12,7 @@ We first considered a web game for the beacons.gg home page and decided against 
 
 - **Identity friction.** Writing to Beacon needs a wallet. In a browser that means a passphrase prompt, which kills "in and out in 30 seconds." A CLI can create the player's keys silently on first run and keep them in a file only the player can read.
 - **Fit.** Door games were always terminal games. The ANSI look is the point, not a constraint.
-- **The website still gets its moment.** Reads from a Beacon server are open, so a read-only dashboard needs no wallet at all. That dashboard is the piece that could sit on the beacons.gg home page: "the network, live."
+- **The website still gets its moment.** Reads from a Beacon server are open, so a read-only website needs no wallet at all. That website is the piece that could sit on the beacons.gg home page: "the network, live."
 
 ## What we want people to feel
 
@@ -37,6 +37,6 @@ We first considered a web game for the beacons.gg home page and decided against 
 
 - Rooms whose timing responds to their contents (each log moves the deadline).
 - Server-enforced rewards (one ember per keeper, only past a threshold).
-- Open reads: the dashboard and the in-game world view need no backend.
+- Open reads: the website and the in-game world view need no backend.
 - Live updates over the socket.
 - Later: scouts (sparks flying between fires) and cross-game play (Vestige players warming their hands).

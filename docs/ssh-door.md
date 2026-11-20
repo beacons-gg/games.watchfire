@@ -1,13 +1,10 @@
 # The SSH door
 
 ```
-$ ssh -p 2222 localhost          # today, locally
-$ ssh watchfire.<domain>         # once deployed
+$ ssh -p 2222 watchfire.example.com
 ```
 
-No install, no sign-up: the most door-game way to play. BBS callers dialed in and the BBS launched the door. Here SSH is the dial-in and the door launches the game.
-
-**Status: built, tested over real ssh, and packaged for Docker** (`apps/door`, [deploy.md](deploy.md)); not yet on a public host. See [Not yet](#not-yet).
+No install, no sign-up: the most door-game way to play. BBS callers dialed in and the BBS launched the door. Here SSH is the dial-in and the door launches the game. Running one in Docker: [deploy.md](deploy.md).
 
 ## Run it
 
@@ -28,7 +25,7 @@ ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 | `WATCHFIRE_DOOR_MAX_PER_IP` | `5` | Connections per address (one game per connection) |
 | `WATCHFIRE_DOOR_IDLE_MINUTES` | `5` | No keystrokes for this long ends the session |
 | `WATCHFIRE_DOOR_MAX_MINUTES` | `60` | The longest one session lasts |
-| `WATCHFIRE_DOOR_WRITES_PER_MINUTE` | `100` | Beacon writes per server for the whole door (see [Rate limits](#rate-limits)) |
+| `WATCHFIRE_DOOR_WRITES_PER_MINUTE` | `100` | Beacon writes per server for the whole door (see [Rate limits and shared reads](#rate-limits-and-shared-reads)) |
 | `WATCHFIRE_DOOR_MASTER_KEY` | made once in `master.key` | 32 bytes, hex or base64: seals every keeper's recovery phrase |
 | `WATCHFIRE_DOOR_MASTER_KEY_FILE` | | A file holding it instead (a Docker secret) |
 | `WATCHFIRE_SERVERS` | `9q72.beacons.gg` | Servers a new keeper starts with |
@@ -91,7 +88,7 @@ Beacon limits signed writes **per address** (120 a minute by default, `BEACON_WR
 - **Shared reads** (`shared.ts`). Every session reads the world every 30 seconds (discovery, then each fire); with many players on, those are mostly the same GETs. Those two reads are shared: an answer from the last 10 seconds is given again, and sessions asking at once wait on one request. Everything else (profiles, access checks, pings) goes straight through, so nothing that's read and then written back goes stale. A move forgets that fire and discovery, before and after it lands, so players see their own moves at once. When the live socket says a fire changed, each watcher's screen reads it **fresh** (core's `freshFetch`): never from before the change, but everyone watching that fire shares the one request, and its answer refreshes the shared copy. Fifty players watching a hundred fires cost the servers about what a handful do.
 - **Paced writes** (`pacer.ts`). Writes (anything but GET) to each server are spaced evenly to `WRITES_PER_MINUTE` (one every 0.6 s at 100), so a player usually sees "Laying a log…" a moment longer at most. When the queue for a server is more than 10 seconds deep, a write is turned away at once with Beacon's own over-budget answer, and the player sees "The wind's too strong. Try again in a moment." rather than waiting out the SDK's 15-second timeout.
 
-For our own servers, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's address and `WATCHFIRE_DOOR_WRITES_PER_MINUTE` with it. Players on other operators' servers share the default budget. Note this when we list the game.
+On a Beacon server you run, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's address and `WATCHFIRE_DOOR_WRITES_PER_MINUTE` with it. On other operators' servers the door shares the default budget.
 
 ## Things only the door can do
 
@@ -124,13 +121,8 @@ The door reads it every 10 seconds: no restart. `ban` refuses an entry it can't 
 ## Security
 
 - Host key: ed25519, made once and kept with the data (`<home>/host_key`, 0600, or the database). Players' ssh clients remember it.
-- Master key: in `WATCHFIRE_DOOR_MASTER_KEY`, the file `WATCHFIRE_DOOR_MASTER_KEY_FILE` names (Docker), or, for a door kept in files, `<home>/master.key` (0600). Never in the database. Losing it loses every keeper the door holds (players who took theirs home keep them). Back it up separately from the data; move it to a KMS before real players arrive.
+- Master key: in `WATCHFIRE_DOOR_MASTER_KEY`, the file `WATCHFIRE_DOOR_MASTER_KEY_FILE` names (Docker), or, for a door kept in files, `<home>/master.key` (0600). Never in the database. Losing it loses every keeper the door holds (players who took theirs home keep them). Back it up separately from the data.
 - Limits: sessions in total, sessions per address, one game per connection, one session per keeper, idle timeout, maximum session length; pages once every 5 seconds; bans.
 - All player text (fire names, names, pages, the motd) goes through `safeText` before it reaches a terminal.
 - Connections that never sign in (port scanners, the container's health check) aren't logged.
 - Run it as an unprivileged user (or in a container) with nothing but the game.
-
-## Not yet
-
-- **A public host:** the image and `compose.yaml` are ready and run locally ([deploy.md](deploy.md)); picking a host, the domain, and DNS are next.
-- **The master key in a KMS** rather than a file or environment variable.

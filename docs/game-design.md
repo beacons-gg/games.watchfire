@@ -54,26 +54,15 @@ Fire names come from the lighter ("The Lantern on Calton Hill"), defaulting to "
 
 ## Screens
 
-```
-╔═════════ WATCHFIRE ═════ node 07 ═════════╗
-  214 fires burning · 9 went dark overnight
-  Nearest: Calton Hill, Edinburgh
-    ▓▓▓▓▓▓░░░░  out in 3h12m · 17 keepers
-  Logs left today: 3
-  [F]eed fire  [L]ight new  [S]end spark
-  [N]ews  [W]arm hands  [Q]uit
-╚═══════════════════════════════════════════╝
-```
-
-- **Main:** an animated ANSI fire header, counts, your nearest fires, logs left, and keyboard shortcuts.
-- **Fire:** a fire's name, place, burn bar, keepers, warmth, embers taken, and its actions.
-- **World:** fires grouped by region, sorted by time left. "Dying fires" first.
-- **News:** the log of what happened since your last visit.
-- **You:** your name (your Beacon profile name, or your keeper name until you set one), your record, and your embers: one per fire you tended past 5 logs. The long-term "score."
-- **Servers:** the Beacon servers you read fires from; play or watch each; membership on members-only servers, with J to ask to join; +/- priority; latency; add by address or from the beacons.gg directory.
-- **Light** asks which server holds the new fire when more than one of yours covers the place, defaulting to the one that covers it most closely.
-- **World** shows each fire's server, and F filters to one server.
-- **Ashes:** fires you tended that went dark, with how long they burned.
+- **Main:** an animated fire header, the counts, the fires nearest your watch place, logs left today, what happened since your last visit, and the keys.
+- **Fire:** a fire's name, place, server, burn bar, keepers, warmth and embers taken, and its moves (feed, warm hands, take an ember, rake the ashes).
+- **World:** every fire, closest to going out first, with its server; **F** filters to one server.
+- **Light:** name a new fire and pick its place. When more than one of your servers covers the place, it asks which one holds the fire, defaulting to the one that covers it most closely.
+- **News:** what happened since your last visit.
+- **You:** your name (your Beacon profile name, or your keeper name until you set one), your record, your embers (one per fire you tended past 5 logs: the long-term score), and kilometres or miles. At a door, also your keeper's recovery phrase, to take it home.
+- **Servers:** the Beacon servers you read fires from; play or watch each; membership on members-only servers, with **J** to ask to join; **+**/**-** priority; latency; add one by address or from the beacons.gg directory.
+- **Online** (at a door): who's on each node and what they're doing; page one of them a line.
+- **Help** and **Watch place** (change where you keep watch).
 
 Keyboard only, with single-key shortcuts as in door games. Every screen works at 80×24 and grows to fill a bigger terminal.
 
@@ -85,7 +74,7 @@ Door games lived on their news bulletins. The news is built by the client from w
 - embers collected;
 - record fires (longest burn this week, most keepers).
 
-On login the client reads the fires in view, compares them with the last snapshot it saved locally, and writes the difference as prose. Live deltas over the socket add lines while you're logged in.
+On login, and every 30 seconds after, the client reads the fires in view, compares them with the last snapshot it saved, and writes the difference as prose. The fire you have open updates live over the socket.
 
 ## Embers and ashes
 
@@ -95,7 +84,7 @@ Embers are the collectible: proof you helped a fire reach 5 logs. Each ember's s
 
 A reaction with the target set to the fire's kindling log. One per player per fire, so "warmth" counts distinct visitors. It costs nothing and is the zero-commitment way to take part.
 
-## Sparks (phase 5)
+## Sparks (later)
 
 Send a spark from a burning fire to light a new fire somewhere else. The spark is a Beacon scout: everyone watching sees it fly across the map. Proposed mechanics, not yet verified on a server:
 
