@@ -39,4 +39,5 @@ We first considered a web game for the beacons.gg home page and decided against 
 - Server-enforced rewards (one ember per keeper, only past a threshold).
 - Open reads: the website and the in-game world view need no backend.
 - Live updates over the socket.
-- Later: scouts (sparks flying between fires) and cross-game play (Vestige players warming their hands).
+- Cross-game play: players of any Beacon game can warm their hands at a fire, and nothing more.
+- Later: scouts (sparks flying between fires).

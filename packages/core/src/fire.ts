@@ -1,7 +1,7 @@
 import type { OpaqueItem } from "@beaconsgg/protocol-types";
 import { emberNeedsText, MOVE_TEXT } from "./copy.ts";
 import { nowSec } from "./time.ts";
-import { FIRE_TUNING } from "./tuning.ts";
+import { FIRE_TUNING, WARM } from "./tuning.ts";
 
 /** The parts of a room a fire view needs, as `client.resolveRoom` returns it. */
 export interface RoomLike {
@@ -50,7 +50,10 @@ export function readFire(room: RoomLike, now = nowSec()): FireView {
   const keepers = Object.keys((s.contributors ?? {}) as Record<string, string[]>);
   const granted = (s.granted ?? {}) as Record<string, Record<string, string[]>>;
   const claimed = (s.claimed ?? []) as string[];
-  const reactions = ((s.reactions ?? []) as { kind?: string; by?: string }[]).filter((r) => r.kind === "warm");
+  // Warmth is who stopped by: one per account, whatever they warmed their hands at, from any game.
+  const warmedBy = [
+    ...new Set(((s.reactions ?? []) as { kind?: string; by?: string }[]).filter((r) => r.kind === WARM && r.by).map((r) => r.by!)),
+  ];
   const outAt = num(s.outAt);
   return ageFire({
     id: room.id,
@@ -63,8 +66,8 @@ export function readFire(room: RoomLike, now = nowSec()): FireView {
     phase: "burning",
     secondsLeft: 0,
     keepers,
-    warmth: reactions.length,
-    warmedBy: [...new Set(reactions.map((r) => r.by).filter((b): b is string => !!b))],
+    warmth: warmedBy.length,
+    warmedBy,
     kindling: contents.find((i) => (i.birth as any)?.kindling)?.unique,
     emberHolders: Object.keys(granted).filter((did) => (granted[did]?.embers?.length ?? 0) > 0),
     raked: claimed,

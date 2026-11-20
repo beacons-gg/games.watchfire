@@ -7,9 +7,11 @@
 // as real fires in the game or on the dashboard. Every line prints what the server answered;
 // the script exits non-zero if a rule the server should enforce did not hold.
 
+import { createClient } from "@beaconsgg/client-sdk";
 import { createWallet } from "@beaconsgg/identity";
 import { encode } from "@beaconsgg/geo";
-import { connect, mintItem, mintLog, SPIKE_TUNING, type FireView } from "@watchfire/core";
+import { io } from "socket.io-client";
+import { connect, mintItem, mintLog, SPIKE_TUNING, WARM, type FireView } from "@watchfire/core";
 import { expect, finish, SPIKE_TYPE as TYPE } from "./spike-kit.ts";
 
 const SERVER = process.env.BEACON ?? "https://9q72.beacons.gg";
@@ -25,7 +27,8 @@ log(`server "${d.name}" v${d.version} at ${wf.servers[0]!.origin}`);
 const keeper = createWallet();
 const alex = createWallet();
 const jen = createWallet();
-const place = { lat: 37.7694, lng: -122.4862 }; // Golden Gate Park
+// Calton Hill, Edinburgh: inside every test server's coverage, the local Edinburgh one included.
+const place = { lat: 55.9553, lng: -3.1822 };
 
 // --- light ---------------------------------------------------------------------------------
 let fire: FireView = await wf.light(keeper, place, "Spike fire");
@@ -74,6 +77,27 @@ const w3 = await wf.warmHands(createWallet(), id);
 fire = (await wf.fire(id))!;
 expect("warming hands works", w1.ok && w3.ok, `${w1.error ?? ""} ${w3.error ?? ""}`);
 log(`      jen warms hands twice: second answer ${w2.ok ? "ok" : w2.error}; warmth now ${fire.warmth}`);
+
+// --- another game ---------------------------------------------------------------------------
+// Warming hands is open to every game; nothing else is. Only on a server that takes writes from
+// other games: one that admits just Watchfire refuses them all before the fire's policy is asked.
+const GUEST = "watchfire-spike-guest";
+const admits = (d.capabilities ?? []).filter((c) => c.startsWith("game:")).map((c) => c.slice(5));
+if (admits.length && !admits.includes(GUEST)) {
+  log(`      another game: skipped, this server admits only ${admits.join(", ")}`);
+} else {
+  const guest = createClient({ connect: io, game: GUEST, understands: ["code:gameNotAccepted"] });
+  const origin = (await guest.addServer(SERVER)).origin;
+  const visitor = createWallet();
+  const before = fire.warmth;
+  const warm = await guest.sendOp(origin, visitor, id, "react", { target: fire.kindling!, kind: WARM });
+  fire = (await wf.fire(id))!;
+  expect("a player of another game warms their hands", warm.ok && fire.warmth === before + 1, warm.ok ? `warmth ${fire.warmth}` : warm.error);
+  const feed = await guest.sendOp(origin, visitor, id, "contribute", { item: mintLog(visitor) });
+  expect("another game can't lay a log", !feed.ok && feed.error === "gameNotAccepted", feed.ok ? "it went on" : feed.error);
+  const ember = await guest.sendOp(origin, visitor, id, "collect", {});
+  expect("another game can't take an ember", !ember.ok && ember.error === "gameNotAccepted", ember.ok ? "it was taken" : ember.error);
+}
 
 // --- discovery ------------------------------------------------------------------------------
 for (const p of [1, 3, 5]) {

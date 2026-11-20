@@ -22,7 +22,7 @@
 | Embers per keeper per fire | 1 | server |
 | Feeding, embers | only while burning | server |
 | Raking the ashes (your logs back, as a record) | only once it's ash, once per keeper, for 2 days | server |
-| Warm your hands | anyone, once per fire | server |
+| Warm your hands | anyone, from any Beacon game, once per fire | server |
 
 Lighting a fire costs a log, so "light a new one" and "feed one" draw from the same three.
 
@@ -83,6 +83,8 @@ Embers are the collectible: proof you helped a fire reach 5 logs. Each ember's s
 ## Warm hands
 
 A reaction with the target set to the fire's kindling log. One per player per fire, so "warmth" counts distinct visitors. It costs nothing and is the zero-commitment way to take part.
+
+It's also the one thing players of other Beacon games can do at a fire. The fire's policy opens `react`, and only `react`, to every game, so a player of a map game passing a fire can stop and warm their hands, and the keepers see the warmth go up. Feeding, embers and raking stay Watchfire's. How another game does it: [beacon-integration.md](beacon-integration.md#warming-hands-from-another-game).
 
 ## Sparks (later)
 

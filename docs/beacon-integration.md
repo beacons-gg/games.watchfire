@@ -10,7 +10,7 @@ Everything here was checked against Beacon 1.1 on `9q72.beacons.gg` by `pnpm spi
 | Coverage | the whole world (`[""]`) |
 | Access | `open`: anyone may write |
 | Services | `mailbox`, `geocode`. No `places`, no `media` |
-| Game slug | **`watchfire-door`**, the only game this server admits. Constant: `GAME_SLUG` |
+| Game slug | **`watchfire-door`**, the only game this server admits for now, so other games can't warm hands here yet. Constant: `GAME_SLUG` |
 | Room types | `watchfire` for real fires, `watchfire-spike` for spikes and tests |
 | CORS | not open to other origins. Not needed: the website reads the world through its door (`/api/world`) |
 
@@ -32,7 +32,7 @@ Built by `firePolicy()` in `packages/core/src/policy.ts`:
     contribute: { role: "public",      phase: "burning" },  // feed
     collect:    { role: "contributor", phase: "burning" },  // ember
     claim:      { role: "contributor", phase: "ash" },      // rake the ashes
-    react:      { role: "public" },                         // warm hands
+    react:      { role: "public", games: ["*"] },           // warm hands, from any game
   },
   lifecycle: { phases: ["burning", "ash"], transitions: { ash: "outAt" } },
   derived: {
@@ -62,6 +62,7 @@ Placed with `initialPools: { embers: [...capacity embers minted by the lighter] 
 | No embers from ash | server (`phase`) | refused `phase` |
 | Rake once, only in ash | server | second rake `gone` |
 | Warm hands once per player per target | server (reaction ledger) | the repeat answers `ok` but adds nothing |
+| Other games may warm hands and nothing else | server (`games` on `react` only) | another game's log and ember are refused `gameNotAccepted` (on a server that admits other games) |
 | 3 logs a day | **client only** | n/a |
 | Which city you "keep watch" from | **client only** | n/a |
 | Spark flight speed | **client only** (scout config is never read by the server) | *unverified* |
@@ -77,6 +78,19 @@ Anything only the client enforces is cheatable by a modified client. The design 
 - **Discovery accepts precision-1 cells.** The 32 cells `0…z` cover the world in one read (`WORLD_CELLS`). The live map channel needs precision-5 cells, at most 256 per socket, so a world view follows individual rooms (`subscribeRoom`, 256 per socket) instead.
 - **Live deltas start after the subscription connects.** The spike missed the first ops. Always take a baseline with `resolveRoom` after subscribing and fold deltas on top, as Beacon's live-updates guide says.
 - **Item `match` is unsigned.** Only `birth` is signed. Never trust another player's `match` for anything the server doesn't already enforce.
+
+## Warming hands from another game
+
+A fire's policy opens one op to every game: `react`, as `games: ["*"]`. Players of any Beacon game can warm their hands at a Watchfire fire; nothing else they send is accepted. This is all another game needs:
+
+- **Find fires.** Rooms of type `watchfire`, placed by the game `watchfire-door`. Because a fire is open to every game, a game's own discovery returns fires along with its own rooms (filter by room type to pick them out). `resolveRoom` finds one by id.
+- **Warm hands.** The fire's kindling log is the item in `state.contents` whose `birth.kindling` is `true`. Send `react` with `{ target: <that item's unique>, kind: "warm" }`. It costs nothing, and the server keeps one per account per target: a repeat answers `ok` and adds nothing.
+- **While it burns.** The server takes a reaction on ash too, but Watchfire offers warming hands only while a fire burns ("There's no warmth left in these ashes."). Other games should do the same.
+- **What Watchfire counts:** warmth is the number of accounts with a `warm` reaction on the fire, whatever they aimed it at, so warming a fire at several logs still counts once. A reaction doesn't record its game, so another game's players count the same as Watchfire's.
+- **Where.** The server must admit the other game's writes (`BEACON_GAMES`, or no `game:` markers) and take `games` in policies (`policy:ops.games` in its descriptor). `9q72` takes `games` but admits only `watchfire-door` for now.
+- **Old fires:** a policy is signed when the fire is lit, so fires lit before this opened up stay Watchfire-only until they burn out (60 hours at most).
+
+`pnpm spike` checks it against any server that admits other games: another game's player warms their hands, and their log and ember are refused `gameNotAccepted`.
 
 ## Untrusted text
 

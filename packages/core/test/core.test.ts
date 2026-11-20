@@ -107,6 +107,12 @@ test("fire policy formulas: logs count items, out time follows logs, ember thres
   assert.equal(evaluate(p.grant.when, { logs: FIRE_TUNING.emberAt }), true);
 });
 
+test("fire policy: warming hands is open to every game, nothing else is", () => {
+  const ops = (firePolicy(FIRE_TUNING, "watchfire") as any).ops as Record<string, { games?: string[] }>;
+  assert.deepEqual(ops.react!.games, ["*"]);
+  for (const [op, rule] of Object.entries(ops)) if (op !== "react") assert.equal(rule.games, undefined, op);
+});
+
 function fire(over: Partial<FireView> & { id: string }): FireView {
   return {
     name: "Test fire", location: { lat: 0, lng: 0 }, logs: 1, placedAt: 1000, outAt: 1000 + 16 * 3600,
@@ -145,7 +151,8 @@ test("readFire judges the phase by the clock, not the stored phase", () => {
       contents: [{ unique: "k", birth: { kind: "log", kindling: true } }],
       contributors: { "did:l": ["k"], "did:m": ["z"] },
       granted: { "did:m": { embers: ["e1"] } },
-      reactions: [{ kind: "warm", by: "did:m" }, { kind: "other", by: "did:l" }],
+      // did:m warmed their hands at two logs: still one visitor.
+      reactions: [{ kind: "warm", by: "did:m" }, { kind: "warm", by: "did:m", target: "z" }, { kind: "other", by: "did:l" }],
     },
   };
   const burning = readFire(room, 150);
