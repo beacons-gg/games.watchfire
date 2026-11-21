@@ -55,13 +55,16 @@ export function WorldMap(props: {
     };
     const [west, east] = pad(Math.min(...lngs), Math.max(...lngs), 12);
     const [south, north] = pad(Math.min(...lats), Math.max(...lats), 8);
+    // Within ±180°: padded past the antimeridian, an edge would wrap to the far side of the world
+    // and frame only part of the fires (Sydney's, say, beside Washington's).
+    const [w, e] = [Math.max(-180, west), Math.min(180, east)];
     const box = {
       type: "MultiPoint" as const,
       coordinates: [
-        [west, Math.max(-85, south)],
-        [east, Math.min(85, north)],
-        [west, Math.min(85, north)],
-        [east, Math.max(-85, south)],
+        [w, Math.max(-85, south)],
+        [e, Math.min(85, north)],
+        [w, Math.min(85, north)],
+        [e, Math.max(-85, south)],
       ],
     };
     return p.fitExtent([[24, 24], [WIDTH - 24, HEIGHT - 24]], box);

@@ -6,3 +6,4 @@ dist/
 .watchfire-dev/
 .watchfire-door/
 secrets/
+listing/answer.json
