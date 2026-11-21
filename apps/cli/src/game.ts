@@ -41,6 +41,7 @@ import {
   type ServerStatus,
   type Watchfire,
   type Units,
+  type City,
 } from "@watchfire/core";
 import { emptyKeeper, type KeeperState, type Session, type WatchPlace } from "./session.ts";
 
@@ -56,7 +57,8 @@ export interface Game {
   error?: string;
   fires: FireView[];
   /** "Edinburgh, Scotland, United Kingdom": a fire's nearest city, once it's been worked out. */
-  nearOf(fireId: string): string | null;
+  /** Where a fire is: its nearest town, or null until that's worked out. */
+  placeOf(fireId: string): City | null;
   keeper: KeeperState;
   me: string | null;
   isGuest: boolean;
@@ -572,7 +574,7 @@ export function useGame(session: Session): Game {
   const setUnits = useCallback(async (units: Units) => saveKeeper({ ...keeperRef.current, units }), [saveKeeper]);
 
   return {
-    status, error, fires, nearOf: (id: string) => places.current.near(id), keeper, me, isGuest, guestHint, logsLeft: left, news, freshNews, message, busy,
+    status, error, fires, placeOf: (id: string) => places.current.placeOf(id), keeper, me, isGuest, guestHint, logsLeft: left, news, freshNews, message, busy,
     servers, serversFixed, multiServer, readOnlyReason, lastSeen, watchUncovered, uncovered, serversNeedingLook, isQuiet,
     serverOf, serverNameOf, lightTargets, moveServer, requestJoin, nameOf, wantNames, hasProfileName: !!me && names.current.hasName(me), blocker,
     setMessage, setWatch, markKeyHintSeen, units: keeper.units ?? "km", setUnits, refresh, refreshFire, watchFire, feed, light, takeEmber, warm, rake,

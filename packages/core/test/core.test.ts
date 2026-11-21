@@ -65,6 +65,28 @@ test("searchCities finds by name, accents, prefix and region", async () => {
   assert.equal((await nearestCity({ lat: -16.43, lng: -179.95 }))?.countryCode, "FJ");
 });
 
+test("small towns are found, and St is Saint", async () => {
+  // Places of a few thousand people, missing from a big-cities-only list.
+  assert.ok((await searchCities("hell")).some((c) => c.label === "Hell, Trøndelag, Norway"));
+  assert.equal((await searchCities("cinderford"))[0]?.label, "Cinderford, England, United Kingdom");
+  assert.equal((await searchCities("smokey point"))[0]?.label, "Smokey Point, Washington, United States");
+  // A last "st" is either: Port Stanley or Port Saint Lucie.
+  assert.ok((await searchCities("port st")).some((c) => c.name === "Port Saint Lucie"));
+  const saint = await searchCities("st andrews, scotland");
+  assert.ok(saint.some((c) => c.name === "Saint Andrews" || c.name === "St Andrews"), saint.map((c) => c.label).join("; "));
+  assert.ok((await searchCities("mt shasta")).length > 0);
+  // A last "st" is still a prefix: "st" may be the start of Stockholm.
+  assert.ok((await searchCities("stockh")).some((c) => c.name === "Stockholm"));
+  // A fire is named by the nearest place, or a much bigger one nearly as close.
+  assert.equal((await nearestCity({ lat: 63.445, lng: 10.905 }))?.name, "Hell");
+  assert.equal((await nearestCity({ lat: 35.6595, lng: 139.7005 }))?.name, "Shibuya");
+  // ...but not a neighbouring town of a similar size: Hell in the Cayman Islands, next to West Bay.
+  const caymanHell = (await searchCities("hell, cayman"))[0]!;
+  assert.equal((await nearestCity(caymanHell))?.name, "Hell");
+  // The label's parts, so it can be shortened without splitting a country's own comma.
+  assert.deepEqual((await searchCities("hell, norway"))[0]?.parts, ["Hell", "Trøndelag", "Norway"]);
+});
+
 test("refusalText never shows a bare code for known refusals, and fits the move", () => {
   assert.equal(refusalText("phase"), "That fire has gone out.");
   assert.equal(refusalText("phase", "contribute"), "That fire has gone out.");
@@ -347,10 +369,10 @@ test("PlaceBook: each fire's nearest city, once; forgotten when the fire is", as
   const book = new PlaceBook();
   const edinburgh = { id: "e@x", location: { lat: 55.95, lng: -3.19 } } as FireView;
   assert.equal(await book.label([edinburgh]), true);
-  assert.match(book.near("e@x") ?? "", /^Edinburgh/);
+  assert.match(book.placeOf("e@x")?.label ?? "", /^Edinburgh/);
   assert.equal(await book.label([edinburgh]), false, "already labelled");
   await book.label([]);
-  assert.equal(book.near("e@x"), null);
+  assert.equal(book.placeOf("e@x"), null);
 });
 
 test("formatDistance: kilometres or miles, and 'here' under a kilometre either way", () => {

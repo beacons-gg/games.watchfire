@@ -3,7 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { distanceKm, FIRE_TUNING, formatDistance, hostOf, safeText, serverLabel } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
-import { BurnBar, cell, Frame, grow, Keys, Message, pointer, stepCursor, TimeLeft, useSize } from "../ui.tsx";
+import { BurnBar, cell, Frame, grow, Keys, Message, placeCell, pointer, stepCursor, TimeLeft, useSize } from "../ui.tsx";
 
 /**
  * Every burning fire, the closest to going out first; then the dark ones this keeper can still
@@ -16,9 +16,13 @@ export function World(props: { game: Game; session: Session; open(id: string): v
   const [only, setOnly] = useState<string | null>(null);
   const { width, height } = useSize();
   const ROWS = Math.max(5, height - 9);
-  const nameW = grow(20, width, 0.3, 44);
-  const nearW = grow(12, width, 0.2, 30);
-  const serverW = grow(12, width, 0.15, 26);
+  // Sized so every column, Away ("12,345 km") included, fits 80 columns. The server column only
+  // with more than one server (up or not: it's where "not answering" shows); with one, the place
+  // gets its room.
+  const servers = game.servers.length > 1;
+  const serverW = servers ? grow(11, width, 0.15, 26) : 0;
+  const nameW = grow(servers ? 18 : 20, width, 0.25, 40);
+  const nearW = grow(servers ? 10 : 20, width, 0.35, 56);
   const hosts = game.servers.filter((s) => s.state === "ok" && s.host).map((s) => s.host!);
   const shown = game.fires.filter((f) => f.phase === "burning" || game.blocker("rake", f) === null);
   const list = only ? shown.filter((f) => hostOf(f.id) === only) : shown;
@@ -68,7 +72,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
       </Text>
       <Text color="#78716c">
         {"  "}
-        {cell("Fire", nameW)} {cell("Near", nearW)} {cell("Server", serverW)} {cell("Burn", 8)} {cell("Left", 7)}{" "}
+        {cell("Fire", nameW)} {cell("Near", nearW)} {servers ? `${cell("Server", serverW)} ` : ""}{cell("Burn", 8)} {cell("Left", 7)}{" "}
         {cell("Logs", 6)}
         {watch ? "Away" : ""}
       </Text>
@@ -76,12 +80,13 @@ export function World(props: { game: Game; session: Session; open(id: string): v
         {page.map((f, i) => {
           const idx = top + i;
           const ash = f.phase === "ash";
-          const near = (game.nearOf(f.id) ?? "").split(",")[0] ?? "";
           const stale = game.lastSeen(f.id) !== null;
           return (
             <Text key={f.id} wrap="truncate-end" color={idx === sel ? "#fbbf24" : ash ? "#78716c" : undefined}>
               {pointer(idx === sel)}
-              {cell(safeText(f.name), nameW)} {cell(near, nearW)} {cell(stale ? "not answering" : game.serverNameOf(f.id), serverW)} <BurnBar secondsLeft={f.secondsLeft} ash={ash} width={8} />{" "}
+              {cell(safeText(f.name), nameW)} {placeCell(game.placeOf(f.id), nearW)}{" "}
+              {servers ? `${cell(stale ? "not answering" : game.serverNameOf(f.id), serverW)} ` : ""}
+              <BurnBar secondsLeft={f.secondsLeft} ash={ash} width={8} />{" "}
               <TimeLeft secondsLeft={f.secondsLeft} ash={ash} stale={stale} pad={7} />{" "}
               {cell(`${f.logs}/${FIRE_TUNING.capacity}`, 6)}
               {watch ? formatDistance(distanceKm(watch, f.location), game.units) : ""}

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import ssh2, { type AuthContext, type Connection, type ServerChannel } from "ssh2";
 import { render } from "ink";
-import { keeperName, safeText } from "@watchfire/core";
+import { keeperName, prepareCitySearch, safeText } from "@watchfire/core";
 import { App, type ScreenName } from "watchfire/app";
 import { detectColorDepth } from "watchfire/local";
 import { memoryKeeperStore, type OnlineNode, type Page, type Session } from "watchfire/session";
@@ -350,6 +350,8 @@ const server = new Server({ hostKeys: [hostKey], banner: "Watchfire: keep the fi
 });
 
 server.listen(PORT, BIND, () => log("listening", { bind: BIND, port: PORT, store: store.where, servers: SERVERS }));
+// Build the town search now, not when the first player opens a place picker (and every node waits).
+void prepareCitySearch().catch((e: unknown) => log("cities-unavailable", { error: String((e as Error)?.message ?? e) }));
 
 // --- the website ----------------------------------------------------------------------------
 if (WEB_PORT > 0) startSite(store, forAll.fetch, { online: () => callers.size });

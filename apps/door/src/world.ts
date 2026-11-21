@@ -114,7 +114,7 @@ export class WorldWatch {
     return {
       id: f.id,
       name: safeText(f.name, 60),
-      near: this.places.near(f.id),
+      near: this.places.placeOf(f.id)?.label ?? null,
       lat: f.location.lat,
       lng: f.location.lng,
       logs: f.logs,

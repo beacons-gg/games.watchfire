@@ -1,16 +1,20 @@
 // Build packages/core/data/cities.json from a GeoNames dump.
 //
-//   node scripts/build-cities.ts <dir with cities15000.txt, admin1CodesASCII.txt, countryInfo.txt>
+//   node scripts/build-cities.ts <dir with cities1000.txt, admin1CodesASCII.txt, countryInfo.txt>
 //
 // Source: https://download.geonames.org/export/dump/ (CC BY 4.0, GeoNames, https://www.geonames.org).
-// Output rows: [name, asciiName, admin1, countryCode, lat, lng, population], sorted by population.
+// cities1000 is every place of 1,000 people or more (about 170,000), so small towns with fun names
+// (Hell, Cinderford, Smokey Point) can be found. CITIES=cities15000 MIN_POP=15000 for a smaller list.
+// Output rows: [name, asciiName, admin1, countryCode, lat, lng, population], sorted by latitude.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const dir = process.argv[2];
 if (!dir) throw new Error("usage: node scripts/build-cities.ts <geonames dir>");
-const MIN_POP = Number(process.env.MIN_POP ?? 15000);
+const CITIES = process.env.CITIES ?? "cities1000";
+// cities1000 also lists seats of local government with fewer people (or none on record): not those.
+const MIN_POP = Number(process.env.MIN_POP ?? 1000);
 
 const lines = (f: string) => readFileSync(join(dir, f), "utf8").split("\n").filter((l) => l && !l.startsWith("#"));
 
@@ -27,7 +31,7 @@ for (const l of lines("countryInfo.txt")) {
 
 type Row = [string, string, string, string, number, number, number];
 const rows: Row[] = [];
-for (const l of lines("cities15000.txt")) {
+for (const l of lines(`${CITIES}.txt`)) {
   const f = l.split("\t");
   const pop = Number(f[14]);
   if (!(pop >= MIN_POP)) continue;
@@ -44,10 +48,11 @@ for (const l of lines("cities15000.txt")) {
     pop,
   ]);
 }
-rows.sort((a, b) => b[6] - a[6]);
+// South to north: a nearest-town lookup reads only a band of latitude.
+rows.sort((a, b) => a[4] - b[4]);
 
 const out = {
-  source: "GeoNames cities15000, https://www.geonames.org, CC BY 4.0",
+  source: `GeoNames ${CITIES}, https://www.geonames.org, CC BY 4.0`,
   fields: ["name", "asciiName", "admin1", "countryCode", "lat", "lng", "population"],
   countries,
   cities: rows,

@@ -3,7 +3,7 @@
 // names to accounts. Framework-free, so each wraps it in its own state.
 
 import { mergeLook, sortFires, type FireView } from "./fire.ts";
-import { nearestCity } from "./cities.ts";
+import { nearestCity, type City } from "./cities.ts";
 import { keeperName } from "./names.ts";
 import { carryUnheard, newsBetween, snapshotOf, type NewsLine, type Snapshot } from "./news.ts";
 import { safeText } from "./text.ts";
@@ -91,24 +91,28 @@ export class NameBook {
   }
 }
 
-/** Each fire's nearest city, worked out once (a fire never moves) from the bundled city list. */
+/** Each fire's nearest town, worked out once (a fire never moves) from the bundled list. */
 export class PlaceBook {
-  private readonly labels = new Map<string, string | null>();
+  private readonly places = new Map<string, City | null>();
 
-  /** "Edinburgh, Scotland, United Kingdom", or null when it isn't known (yet). */
-  near(fireId: string): string | null {
-    return this.labels.get(fireId) ?? null;
+  /** Where a fire is (its label: "Edinburgh, Scotland, United Kingdom"), or null when not known (yet). */
+  placeOf(fireId: string): City | null {
+    return this.places.get(fireId) ?? null;
   }
 
   /** Label the fires not labelled yet, and forget fires no longer listed. True when any changed. */
   async label(fires: readonly FireView[]): Promise<boolean> {
     let changed = false;
     const ids = new Set(fires.map((f) => f.id));
-    for (const id of this.labels.keys()) if (!ids.has(id)) this.labels.delete(id);
+    for (const id of this.places.keys()) if (!ids.has(id)) this.places.delete(id);
     for (const f of fires) {
-      if (this.labels.has(f.id)) continue;
-      this.labels.set(f.id, (await nearestCity(f.location))?.label ?? null);
+      if (this.places.has(f.id)) continue;
+      const started = performance.now();
+      this.places.set(f.id, await nearestCity(f.location));
       changed = true;
+      // A point far from any town can take tens of milliseconds: after one, let other work (other
+      // players, in the door) in before the next.
+      if (performance.now() - started > 4) await new Promise((resolve) => setTimeout(resolve, 0));
     }
     return changed;
   }

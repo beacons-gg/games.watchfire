@@ -48,15 +48,15 @@ Beacon rooms can't count per-player actions across rooms or days. A modified cli
 
 ## Where you are
 
-On first run the game asks **"Where do you keep watch?"** and matches the answer against a bundled city list. That place is your watch place: the center of "nearest fires." Players can light fires anywhere, not only near home. Beacon doesn't check a player's physical location, and for a terminal game the map is the board.
+On first run the game asks **"Where do you keep watch?"** and matches the answer against a bundled list of every town of 1,000 people or more ("St" and "Saint", "Mt" and "Mount" both work). For somewhere smaller, like a crater in a desert, a player types its "lat, lng". That place is your watch place: the center of "nearest fires." Players can light fires anywhere, not only near home. Beacon doesn't check a player's physical location, and for a terminal game the map is the board.
 
-Fire names come from the lighter ("The Lantern on Calton Hill"), defaulting to "The fire at <city>". Underneath, each fire is labelled with the nearest city from the bundled list, worked out offline. The server's geocode service (`getGeocode`, available on `9q72`) could add neighborhoods later. Fires are placed within 800 m of the chosen city's center, so fires in one city don't stack on one point.
+Fire names come from the lighter ("The Lantern on Calton Hill"), defaulting to "The fire at <city>". Each fire is labelled with the nearest town from the bundled list ("Hell, Trøndelag, Norway"), or a much bigger one barely farther, worked out offline. The fire screen, the main screen's nearest fires and the World list all show it, shortened to fit narrow terminals. The server's geocode service (`getGeocode`, available on `9q72`) could add neighborhoods later. Fires are placed within 800 m of the chosen city's center, so fires in one city don't stack on one point.
 
 ## Screens
 
 - **Main:** an animated fire header, the counts, the fires nearest your watch place, logs left today, what happened since your last visit, and the keys. When you have logs lying in the ashes of a fire you kept, a line says so and **A** opens it.
 - **Fire:** a fire's name, place, server, burn bar, keepers, warmth and embers taken, and its moves (feed, warm hands, take an ember, rake the ashes).
-- **World:** every burning fire, closest to going out first, with its server; then the dark fires you can still rake. A dark fire you have nothing to collect from isn't listed. **F** filters to one server.
+- **World:** every burning fire, closest to going out first, with where it is and (with several servers) its server; then the dark fires you can still rake. A dark fire you have nothing to collect from isn't listed. **F** filters to one server.
 - **Light:** name a new fire and pick its place. When more than one of your servers covers the place, it asks which one holds the fire, defaulting to the one that covers it most closely.
 - **News:** what happened since your last visit.
 - **You:** your name (your Beacon profile name, or your keeper name until you set one), your record, your embers (one per fire you tended past 5 logs: the long-term score), and kilometres or miles. At a door, also your keeper's recovery phrase, to take it home.

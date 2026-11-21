@@ -22,7 +22,7 @@ Make the window big: the game needs at least 80 × 24 and uses whatever you give
 
 ## Your first visit
 
-The game asks **where you keep watch**: type a town or city and pick it from the list. That's your home on the map: the main screen shows the fires nearest it. (It's only for the map. You can light and feed fires anywhere.)
+The game asks **where you keep watch**: type a town or city and pick it from the list. Any town of 1,000 people or more is there; for somewhere smaller, type its "lat, lng" from any map. That's your home on the map: the main screen shows the fires nearest it. (It's only for the map. You can light and feed fires anywhere.)
 
 ## A day in Watchfire
 

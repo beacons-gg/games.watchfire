@@ -60,7 +60,7 @@ export function CityPicker(props: {
           </Text>
         ))}
         {query.trim().length >= 2 && results.length === 0 && !parseLatLng(query) ? (
-          <Text color="#78716c">  No town by that name. Try a bigger city nearby, or type "lat, lng".</Text>
+          <Text color="#78716c">  No town by that name. Try a town nearby, or type its "lat, lng" from any map.</Text>
         ) : null}
         {!query.trim() && props.fallback ? <Text color="#78716c">  Enter on its own: {props.fallback.label}</Text> : null}
       </Box>

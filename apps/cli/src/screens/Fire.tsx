@@ -57,7 +57,7 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
   const off = (move: Parameters<Game["blocker"]>[0]) => readOnly || game.blocker(move, f) !== null;
 
   const watch = game.keeper.watch;
-  const place = game.nearOf(f.id);
+  const place = game.placeOf(f.id)?.label;
   const keepers = f.keepers.map((d) => (d === me ? "you" : game.nameOf(d)));
   const showN = grow(5, width, 0.06, 12);
   const shown = keepers.slice(0, showN).join(", ") + (keepers.length > showN ? ` and ${keepers.length - showN} more` : "");

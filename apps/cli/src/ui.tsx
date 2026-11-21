@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Box, Text, Transform, useAnimation, useInput, useWindowSize, type Key } from "ink";
-import { DAY_SEC, formatDuration, LOW_SEC, stripControls, URGENT_SEC } from "@watchfire/core";
+import { DAY_SEC, formatDuration, LOW_SEC, stripControls, URGENT_SEC, type City } from "@watchfire/core";
 import { Flame } from "./flame.ts";
 
 /** The smallest screen the layout is designed for; bigger terminals get more of everything. */
@@ -169,6 +169,16 @@ export const pointer = (on: boolean) => (on ? "▸ " : "  ");
 export function cell(s: string, n: number): string {
   const chars = [...s];
   return chars.length > n ? chars.slice(0, n - 1).join("") + "…" : s + " ".repeat(n - chars.length);
+}
+
+/**
+ * A place ("Smokey Point, Washington, United States") padded to n columns, shortened to fit:
+ * the whole of it, else the town and its country, else the town.
+ */
+export function placeCell(place: City | null, n: number): string {
+  if (!place) return cell("", n);
+  const tries = [place.label, place.parts.length > 2 ? `${place.name}, ${place.parts.at(-1)}` : "", place.name];
+  return cell(tries.find((t) => t && [...t].length <= n) ?? place.name, n);
 }
 
 /** The status / message line. */
