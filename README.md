@@ -63,7 +63,7 @@ pnpm build            # apps/cli/dist/watchfire.mjs (one self-contained file) an
 
 ### Releasing
 
-Set `version` in `apps/cli/package.json`, commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`. The [release workflow](.github/workflows/release.yml) checks the tag matches, runs the tests, builds executables for Windows, macOS (Apple silicon and Intel) and Linux (x64 and ARM) with Bun, and publishes them as a GitHub release. (A job that runs each one on its own OS first is in the workflow, switched off for now.) A tag with a suffix (`v0.2.0-rc.1`) makes a pre-release. To build the same archives locally: `pnpm -C apps/cli run build && scripts/package-cli.sh 0.2.0`.
+Set `version` in `apps/cli/package.json`, commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`. The [release workflow](.github/workflows/release.yml) checks the tag matches, runs the tests, builds executables for Windows, macOS (Apple silicon and Intel) and Linux (x64 and ARM) with Bun, and publishes them as a GitHub release. The Windows one is built on Windows, where Bun gives it the game's icon and its details (name, description, version); the workflow runs it and checks both. (A job that runs every one on its own OS first is in the workflow, switched off for now.) A tag with a suffix (`v0.2.0-rc.1`) makes a pre-release. `gh workflow run release.yml --ref <branch>` is a dry run: everything built and checked, nothing published. To build the same archives locally: `pnpm -C apps/cli run build && scripts/package-cli.sh 0.2.0` (off Windows, the Windows one has no icon or details).
 
 The macOS builds are ad-hoc signed, not with an Apple Developer ID, so players unblock them once (the release notes say how). Signing and notarizing is a later step.
 

@@ -46,3 +46,9 @@ node listing/tools/art.mjs /tmp/art
 listing/tools/shoot.sh /tmp/art/icon.html listing/images/icon.png 512,512
 listing/tools/shoot.sh /tmp/art/banner.html listing/images/banner.png 1500,500
 ```
+
+The Windows executable's icon is the same picture, at every size Windows uses:
+
+```sh
+node listing/tools/ico.mjs listing/images/icon.png apps/cli/assets/watchfire.ico
+```
