@@ -1,7 +1,8 @@
 # Release: on a version tag, build the game as standalone executables for Linux, macOS and
-# Windows, and publish them as a GitHub release. Linux builds the bundle and the Linux and macOS
-# executables; Windows builds its own, as only there does Bun give it its icon and details. Each
-# one is run on its own OS before anything is published (`windows`, `check`).
+# Windows, and publish them as a GitHub release. Linux builds the bundle and the Linux executables;
+# Windows and macOS each build their own from it: only on Windows does Bun give the Windows one its
+# icon and details, and only on macOS can the Mac ones be signed so they run. Each OS runs its
+# executables before anything is published.
 #
 #   1. Set "version" in apps/cli/package.json (say 0.2.0) and commit it.
 #   2. git tag v0.2.0 && git push origin v0.2.0
@@ -68,11 +69,21 @@ jobs:
       - name: Executables
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          PLATFORMS: linux-x64 linux-arm64 macos-x64 macos-arm64
+          PLATFORMS: linux-x64 linux-arm64
         run: scripts/package-cli.sh "$VERSION" dist/release
+      - name: It runs
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        # linux-arm64 is built the same way but not run: there's no arm64 Linux runner to count on.
+        run: |
+          mkdir check
+          tar -xzf "dist/release/watchfire-$VERSION-linux-x64.tar.gz" -C check
+          exe="check/watchfire-$VERSION-linux-x64/watchfire"
+          test "$("$exe" --version)" = "$VERSION"
+          "$exe" --help
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: release-unix
+          name: release-linux
           path: dist/release/
           if-no-files-found: error
           retention-days: 7
@@ -141,51 +152,53 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Unpack the Linux and macOS archives on their own OS and run the game's --version and --help.
-  # (The windows job runs its own; linux-arm64 is built the same way but not run: there's no arm64
-  # Linux runner to count on.)
-  check:
+  # The Mac executables, built on macOS from the same bundle and signed there (ad-hoc): Apple
+  # silicon won't run an executable without a valid signature, and Bun's own signature on the
+  # Intel build, made on Linux, comes out invalid. Then both are run, the Intel one under Rosetta.
+  macos:
     needs: build
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: ubuntu-24.04, platform: linux-x64 }
-          - { os: macos-15, platform: macos-arm64 }
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-15
+    timeout-minutes: 15
     env:
       VERSION: ${{ needs.build.outputs.version }}
-      PLATFORM: ${{ matrix.platform }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: release-unix
-          path: release
-      - name: Run it
-        shell: bash
+          name: bundle
+          path: apps/cli/dist
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Executables
+        env:
+          PLATFORMS: macos-arm64 macos-x64
+        run: scripts/package-cli.sh "$VERSION" dist/release
+      - name: They run, signed
         run: |
-          tar -xzf "release/watchfire-$VERSION-$PLATFORM.tar.gz"
-          exe="watchfire-$VERSION-$PLATFORM/watchfire"
-          test "$("$exe" --version)" = "$VERSION"
-          "$exe" --help
-      - name: Signatures, and the Intel build under Rosetta (macOS)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          # Ad-hoc signatures from Bun: Apple Silicon won't run an unsigned executable at all.
-          codesign --verify --verbose "watchfire-$VERSION-macos-arm64/watchfire"
-          tar -xzf "release/watchfire-$VERSION-macos-x64.tar.gz"
-          codesign --verify --verbose "watchfire-$VERSION-macos-x64/watchfire"
-          if arch -x86_64 /usr/bin/true 2>/dev/null; then
-            test "$(arch -x86_64 "watchfire-$VERSION-macos-x64/watchfire" --version)" = "$VERSION"
-          else
-            echo "No Rosetta on this runner: the Intel build is signed but wasn't run."
-          fi
+          mkdir check
+          for p in macos-arm64 macos-x64; do
+            tar -xzf "dist/release/watchfire-$VERSION-$p.tar.gz" -C check
+            codesign --verify --strict --verbose "check/watchfire-$VERSION-$p/watchfire"
+          done
+          arm="check/watchfire-$VERSION-macos-arm64/watchfire"
+          test "$("$arm" --version)" = "$VERSION"
+          "$arm" --help
+          # Rosetta, to run the Intel build too.
+          arch -x86_64 /usr/bin/true 2>/dev/null || sudo softwareupdate --install-rosetta --agree-to-license
+          test "$(arch -x86_64 "check/watchfire-$VERSION-macos-x64/watchfire" --version)" = "$VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-macos
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 7
 
   release:
     if: github.ref_type == 'tag'
-    needs: [build, windows, check]
+    needs: [build, windows, macos]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

@@ -9,7 +9,7 @@
 - **Warm hands from any Beacon game** (2026-11-20). The fire policy opens `react`, and only `react`, to every game; checked by `pnpm spike` on a server that admits other games.
 - **Executables** (2026-11-20). A version tag builds the game for Windows, macOS and Linux and publishes a GitHub release ([release.yml](../.github/workflows/release.yml)). The Windows one has the game's icon and details (2026-11-22).
 - **Listed in the beacons.gg directory** (2026-11-21), waiting for review: [listing/](../listing).
-- **Local play first** (2026-11-23). Most players run a download, so: the website leads with it (a button for the visitor's computer, steps for Windows, a Mac and Linux, the door as the other way in); the game reminds a local keeper to write down its twelve words until they have (You → K); and it says on the main screen when a newer release is out. Each release is run on Linux and macOS, as well as Windows, before it's published.
+- **Local play first** (2026-11-23). Most players run a download, so: the website leads with it (a button for the visitor's computer, steps for Windows, a Mac and Linux, the door as the other way in); the game reminds a local keeper to write down its twelve words until they have (You → K); and it says on the main screen when a newer release is out. Each release is built on Linux, Windows and macOS (the Mac ones signed there; the Intel build's signature from Linux was invalid) and run on each before it's published.
 - **The website** (2026-11-19). `apps/dashboard`, served by the door: the game explained, how to start playing, today's numbers, a map of the fires, the ones closest to going out, and the watch log. It can also run alone, with no door on its machine.
 
 ## Next
