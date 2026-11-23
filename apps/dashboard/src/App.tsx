@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { ReportFire, WorldReport } from "@watchfire/core/report";
 import { FlameCanvas } from "./FlameCanvas.tsx";
-import { HowToPlay, Join, JoinCommand } from "./Guide.tsx";
+import { DOWNLOAD_URL } from "@watchfire/core/tuning";
+import { DownloadButton, HowToPlay, JoinCommand, Play } from "./Guide.tsx";
 import { WorldMap } from "./WorldMap.tsx";
 import { ago, clock, DAY_SEC, duration, isLit, RULES, urgency } from "./format.ts";
 import { useWorld } from "./useWorld.ts";
@@ -10,6 +11,9 @@ export function App() {
   const { report, error, now } = useWorld();
   // Until the door answers, the likeliest command; null once it says this site has no door to offer.
   const join = report ? report.join : `ssh -p 2222 ${location.hostname}`;
+  // Where to download the game: the door says (it may point elsewhere, or nowhere).
+  const download = report ? report.download : DOWNLOAD_URL;
+  const playable = !!(download || join);
   const [selected, setSelected] = useState<string | null>(null);
 
   const fires = report?.fires ?? [];
@@ -30,7 +34,7 @@ export function App() {
         <nav aria-label="Sections">
           <a href="#tonight">Tonight</a>
           <a href="#how">How to play</a>
-          {join ? <a href="#join">Join</a> : null}
+          {playable ? <a href="#play">Play</a> : null}
         </nav>
         <LiveBadge report={report} error={error} />
       </header>
@@ -39,19 +43,25 @@ export function App() {
         <section className="hero">
           <FlameCanvas strength={strength} className="hero-flame" />
           <div className="hero-text">
-            <p className="kicker">A door game, played over ssh</p>
+            <p className="kicker">A door game for your terminal</p>
             <h1>Somewhere in the world, a fire is about to go out.</h1>
             <p className="lede">
               You have <strong>{RULES.logsPerDay} logs</strong> today. Lay them on the fires you care about, light new ones at
               real places, and come back tomorrow to see what survived the night. A visit takes about a minute.
             </p>
-            {join ? <JoinCommand command={join} /> : null}
+            {download ? <DownloadButton href={download} /> : null}
+            {join ? (
+              <>
+                {download ? <p className="hint">Or play at this door over ssh, with nothing to download:</p> : null}
+                <JoinCommand command={join} />
+              </>
+            ) : null}
             <p className="hint">
-              Nothing to install: it runs in your terminal, like the door games of the old bulletin boards.
-              {join ? (
+              It runs in your terminal, like the door games of the old bulletin boards.
+              {playable ? (
                 <>
                   {" "}
-                  <a href="#join">First time? Here's how.</a>
+                  <a href="#play">First time? Here's how.</a>
                 </>
               ) : null}
             </p>
@@ -132,7 +142,7 @@ export function App() {
         </section>
 
         <HowToPlay />
-        {join ? <Join command={join} /> : null}
+        {playable ? <Play download={download} command={join} /> : null}
       </main>
 
       <footer className="foot">

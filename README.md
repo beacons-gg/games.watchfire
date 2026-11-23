@@ -2,21 +2,27 @@
 
 > Somewhere in the world, a fire is about to go out. You have three logs today.
 
-Watchfire is a BBS-style door game played in a terminal: over `ssh` with nothing to install, or locally. Fires burn at real places on the map. Every day you get three logs to keep them alive. Fires nobody tends go dark, and nobody can keep one going alone for long, so fires live because strangers chose them. A visit takes about a minute.
+Watchfire is a BBS-style door game played in a terminal: on your own computer (one download, nothing to install), or over `ssh` at a door. Fires burn at real places on the map. Every day you get three logs to keep them alive. Fires nobody tends go dark, and nobody can keep one going alone for long, so fires live because strangers chose them. A visit takes about a minute.
 
 The game runs on [Beacon](https://beacons.gg). The fires live in Beacon rooms, and each room's policy holds the rules, so the server enforces them for everyone and Watchfire has no game backend of its own. A door (the SSH server) also serves a website that explains the game and shows the world's fires live.
 
 ## Play
 
-Over ssh, at a door someone runs (the door's website shows its address):
+Most players play on their own computer. Download the game for Windows, macOS or Linux from the [latest release](https://github.com/beacons-gg/watchfire/releases/latest), unpack it, and run `watchfire` in a terminal:
+
+```sh
+tar -xzf watchfire-*-linux-x64.tar.gz && ./watchfire-*-linux-x64/watchfire   # Linux; the release notes cover Windows and macOS
+```
+
+The first time, it makes your keeper and keeps it in your home folder. Back it up: in the game, **Y** then **K** shows its 12 words, which bring it back on a new computer (`watchfire import`). The game tells you on its main screen when a newer version is out. `watchfire --help` lists the rest.
+
+Or come in over ssh at a door someone runs, with nothing to download (the door's website shows its address). It's also the way in from a phone:
 
 ```sh
 ssh -p 2222 <the door's address>
 ```
 
-Your ssh key is your keeper. Without a key you come in as a guest who can watch but not lay logs. The rules, the keys and how to get set up on a Mac, Windows or a phone are in [docs/how-to-play.md](docs/how-to-play.md).
-
-On your own computer: download the game for Windows, macOS or Linux from the [releases](https://github.com/beacons-gg/watchfire/releases), unpack it and run `watchfire` in a terminal. Nothing else to install. Your keeper lives in your home folder, as with any key of yours. From a checkout: `pnpm play` (see [Develop](#develop)).
+At a door your ssh key is your keeper; without one you come in as a guest who can watch but not lay logs. The rules, the keys and the step-by-step for each computer are in [docs/how-to-play.md](docs/how-to-play.md). From a checkout: `pnpm play` (see [Develop](#develop)).
 
 ## Run a door
 
@@ -44,6 +50,9 @@ Backups, Dokploy, keeping data in files, an outside database, running the websit
 | [ssh-door.md](docs/ssh-door.md) | The SSH door: identity, settings, where its data lives, rate limits, bans, security |
 | [deploy.md](docs/deploy.md) | Running the door in Docker or Dokploy: secrets, settings, backups, sysop commands |
 | [roadmap.md](docs/roadmap.md) | What's built, what's next, and open questions |
+| [open-source.md](docs/open-source.md) | Opening the repository: what's ready, what to decide, the steps |
+
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). A security problem: [SECURITY.md](SECURITY.md), privately.
 
 ## Develop
 
@@ -63,7 +72,7 @@ pnpm build            # apps/cli/dist/watchfire.mjs (one self-contained file) an
 
 ### Releasing
 
-Set `version` in `apps/cli/package.json`, commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`. The [release workflow](.github/workflows/release.yml) checks the tag matches, runs the tests, builds executables for Windows, macOS (Apple silicon and Intel) and Linux (x64 and ARM) with Bun, and publishes them as a GitHub release. The Windows one is built on Windows, where Bun gives it the game's icon and its details (name, description, version); the workflow runs it and checks both. (A job that runs every one on its own OS first is in the workflow, switched off for now.) A tag with a suffix (`v0.2.0-rc.1`) makes a pre-release. `gh workflow run release.yml --ref <branch>` is a dry run: everything built and checked, nothing published. To build the same archives locally: `pnpm -C apps/cli run build && scripts/package-cli.sh 0.2.0` (off Windows, the Windows one has no icon or details).
+Set `version` in `apps/cli/package.json`, commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`. The [release workflow](.github/workflows/release.yml) checks the tag matches, runs the tests, builds executables for Windows, macOS (Apple silicon and Intel) and Linux (x64 and ARM) with Bun, and publishes them as a GitHub release. The Windows one is built on Windows, where Bun gives it the game's icon and its details (name, description, version); the workflow runs it and checks both. The Linux and macOS ones are run on their own OS too, before anything is published. A tag with a suffix (`v0.2.0-rc.1`) makes a pre-release. `gh workflow run release.yml --ref <branch>` is a dry run: everything built and checked, nothing published. To build the same archives locally: `pnpm -C apps/cli run build && scripts/package-cli.sh 0.2.0` (off Windows, the Windows one has no icon or details).
 
 The macOS builds are ad-hoc signed, not with an Apple Developer ID, so players unblock them once (the release notes say how). Signing and notarizing is a later step.
 

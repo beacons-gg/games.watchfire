@@ -34,6 +34,7 @@ ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 | `WATCHFIRE_WEB_ROOT` | `apps/dashboard/dist` | The built website (`/app/web` in the image) |
 | `WATCHFIRE_DOOR_PUBLIC_PORT` | the door's port | The port players dial, for the website's join command (Docker maps it) |
 | `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | The join command the website shows, if it should name something else. With no door here, the door it points to; unset, the site shows no join command |
+| `WATCHFIRE_DOWNLOAD` | `https://github.com/beacons-gg/watchfire/releases/latest` | Where the website's Download button (and its how-to for Windows, Mac and Linux) points; `none` for no download |
 
 The sysop's announcement (the motd) greets every player as they arrive; a change reaches players arriving within 10 seconds. With the ban list (see [Bans](#bans)), it's set with the door's own commands, which work the same on files and Postgres:
 
@@ -95,15 +96,15 @@ On a Beacon server you run, raise `BEACON_WRITE_RATE_LIMIT_MAX` for the door's a
 - **Who's online** (O on the main screen): every node, who's on it (keeper name, or "a guest"), how long, and what they're doing ("at a fire", "surveying the world"…).
 - **Pages:** on who's online, ↑↓ to a node and P to send it one line (up to 120 characters). It shows on whatever screen they're on and rings their terminal bell; their last few pages are listed on who's online. Keepers can page (guests can read pages, not send them), once every 5 seconds. The door logs that a page was sent, never what it said.
 - **Sysop announcements**: `motd`.
-- **The website** (port 8080): the game explained, how to join, and the world live. See [The website](#the-website).
+- **The website** (port 8080): the game explained, how to start playing, and the world live. See [The website](#the-website).
 
 ## The website
 
-The door also serves `apps/dashboard`, the game's flyer: what Watchfire is, how to play, how to join (the `ssh` command, worked out from the address each visitor used, with steps for a Mac, Windows and phones), and the world live. Nothing to log in to; it only reads.
+The door also serves `apps/dashboard`, the game's flyer: what Watchfire is, how to play, how to start (the download, with steps for Windows, a Mac and Linux; and the door's `ssh` command, worked out from the address each visitor used, with steps for computers and phones), and the world live. Nothing to log in to; it only reads.
 
 - `world.ts` looks at the world every 30 seconds through the door's shared reads, on the door's servers (`WATCHFIRE_SERVERS`): the fires, their nearest cities, their lighters' names, and the watch log (what was lit, fed, filled and lost), kept with the door's data (`world.json`, or the database).
 - `web.ts` serves the built site and `GET /api/world` (that look, plus the join command and how many are at the door). GET and HEAD only; files only from the site's folder; `default-src 'self'`.
-- With `WATCHFIRE_DOOR_PORT=0` the website runs alone (`site.ts`), for a public site whose door is elsewhere: it shows `WATCHFIRE_JOIN`'s command (or none), and "lit today" where it would count who's at the door. Give it its own data (files, or its own database): two watch logs in one database would trip over each other.
+- With `WATCHFIRE_DOOR_PORT=0` the website runs alone (`site.ts`), for a public site whose door is elsewhere: it offers the download and `WATCHFIRE_JOIN`'s command (or no door), and "lit today" where it would count who's at the door. Give it its own data (files, or its own database): two watch logs in one database would trip over each other.
 - `pnpm dashboard` runs the site with live reload, reading `/api/world` from a door running locally (`pnpm door`).
 
 ## Bans

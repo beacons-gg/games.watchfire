@@ -30,6 +30,7 @@ Make it a **Docker Compose** app, not Stack: Swarm can't source secrets from the
 | `WATCHFIRE_DOOR_PUBLIC_PORT` | `2222` | Host port for ssh, also used in the website's join command |
 | `WATCHFIRE_WEB_PUBLIC_PORT` | `8080` | Host port for the website |
 | `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | Override the join command the website shows |
+| `WATCHFIRE_DOWNLOAD` | the latest GitHub release | Where the website's Download button goes (`none`: no download, only the door) |
 | `WATCHFIRE_SERVERS` | `https://9q72.beacons.gg` | Servers a new keeper starts with, comma-separated |
 | `WATCHFIRE_IMAGE` | `watchfire-door:latest` | Image name, for a prebuilt image |
 
@@ -63,11 +64,11 @@ Run one door per database: the one-session-per-keeper check lives in the door's 
 
 ## Website only
 
-To serve the site without an ssh door on that machine (say, a public site for a door at home), set in `.env`:
+To serve the site without an ssh door on that machine (say, the game's public website, or a public site for a door at home), set in `.env`:
 
 ```sh
 COMPOSE_FILE=compose.yaml:compose.site.yaml
-WATCHFIRE_JOIN=ssh -p 2222 door.example.com    # the door it advertises; unset hides "Join"
+WATCHFIRE_JOIN=ssh -p 2222 door.example.com    # a door it advertises too; unset, it offers only the download
 ```
 
 Only 8080 is published. No database, master key or keepers; the watch log goes in the `site-data` volume. It reads the world from the same Beacon servers (`WATCHFIRE_SERVERS`), so it shows what the door's players see.

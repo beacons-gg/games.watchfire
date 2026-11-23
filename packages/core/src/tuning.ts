@@ -7,6 +7,10 @@ export const FIRE_TYPE = "watchfire";
 /** Servers a fresh install trusts. The player can add more. */
 export const DEFAULT_SERVERS = ["https://9q72.beacons.gg"] as const;
 
+/** Where the game is published (GitHub releases), and where players download the latest. */
+export const RELEASES_REPO = "beacons-gg/watchfire";
+export const DOWNLOAD_URL = `https://github.com/${RELEASES_REPO}/releases/latest`;
+
 /** Logs a player may add per day. Enforced by the client only (see docs/beacon-integration.md). */
 export const LOGS_PER_DAY = 3;
 

@@ -3,6 +3,13 @@
   "license": "Apache-2.0",
   "version": "0.0.4",
   "description": "A BBS-style door game on Beacon. Keep the fires burning.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beacons-gg/watchfire.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/beacons-gg/watchfire#readme",
+  "bugs": "https://github.com/beacons-gg/watchfire/issues",
   "type": "module",
   "bin": {
     "watchfire": "dist/watchfire.mjs"

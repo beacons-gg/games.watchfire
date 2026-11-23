@@ -231,13 +231,14 @@ async function play(channel: ServerChannel, who: Who, ip: string, pty: Pty, colo
       fetch: forAll.fetch,
       freshFetch: forAll.fresh,
       ...(FIRE_TYPE.type ? { fireType: FIRE_TYPE.type } : {}),
+      ...(keeper ? { revealPhrase: keeper.revealPhrase } : {}),
       door: {
         online: () => [...callers.values()].map((c) => c.info),
         onScreen: (screen) => {
           caller.info.activity = ACTIVITY[screen];
         },
         ...(announcement ? { motd: announcement } : {}),
-        ...(keeper ? { revealPhrase: keeper.revealPhrase, page: (to: OnlineNode, text: string) => page(caller, to, text) } : {}),
+        ...(keeper ? { page: (to: OnlineNode, text: string) => page(caller, to, text) } : {}),
         onPage: (listener) => {
           caller.listeners.add(listener);
           return () => caller.listeners.delete(listener);

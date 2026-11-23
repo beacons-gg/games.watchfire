@@ -7,7 +7,7 @@
 #   PLATFORMS="linux-x64 windows-x64" scripts/package-cli.sh 0.1.0   # just these
 #
 # Out: watchfire-<version>-<platform>.tar.gz (.zip for Windows), each a folder with the executable,
-# LICENSE and THIRD-PARTY-NOTICES.txt. Bun builds every platform from one machine, but only gives
+# LICENSE, NOTICE and THIRD-PARTY-NOTICES.txt. Bun builds every platform from one machine, but only gives
 # the Windows one its icon and details (name, description, version) when it runs on Windows: the
 # release builds that one on a Windows runner. The macOS ones are ad-hoc signed by Bun, not with a
 # Developer ID: see the release notes.
@@ -66,7 +66,7 @@ for platform in $platforms; do
   "$bun" build --compile --target="bun-$target" \
     --no-compile-autoload-dotenv --no-compile-autoload-bunfig "${details[@]}" \
     "$src/watchfire.mjs" --outfile "$work/$name/$exe" >/dev/null
-  cp LICENSE "$src/THIRD-PARTY-NOTICES.txt" "$work/$name/"
+  cp LICENSE NOTICE "$src/THIRD-PARTY-NOTICES.txt" "$work/$name/"
   if [[ $platform == windows-* ]]; then
     # python's zipfile rather than zip, which isn't everywhere.
     "$python" -I - "$work" "$name" "$out/$name.zip" <<'PY'

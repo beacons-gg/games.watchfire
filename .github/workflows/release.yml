@@ -1,8 +1,7 @@
 # Release: on a version tag, build the game as standalone executables for Linux, macOS and
 # Windows, and publish them as a GitHub release. Linux builds the bundle and the Linux and macOS
-# executables; Windows builds its own, as only there does Bun give it its icon and details.
-# (Running each one on its own OS first, the `check` job, is off for now: remove its `if: false`
-# and add it back to release's `needs`.)
+# executables; Windows builds its own, as only there does Bun give it its icon and details. Each
+# one is run on its own OS before anything is published (`windows`, `check`).
 #
 #   1. Set "version" in apps/cli/package.json (say 0.2.0) and commit it.
 #   2. git tag v0.2.0 && git push origin v0.2.0
@@ -142,11 +141,11 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Unpack each archive on its own OS and run the game's --version and --help. (linux-arm64 is
-  # built the same way but not run: there's no arm64 Linux runner to count on.)
+  # Unpack the Linux and macOS archives on their own OS and run the game's --version and --help.
+  # (The windows job runs its own; linux-arm64 is built the same way but not run: there's no arm64
+  # Linux runner to count on.)
   check:
-    if: false # off for now; see the top of this file
-    needs: [build, windows]
+    needs: build
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -154,7 +153,6 @@ jobs:
         include:
           - { os: ubuntu-24.04, platform: linux-x64 }
           - { os: macos-15, platform: macos-arm64 }
-          - { os: windows-2025, platform: windows-x64 }
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -162,11 +160,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: release-*
-          merge-multiple: true
+          name: release-unix
           path: release
-      - name: Run it (Linux, macOS)
-        if: runner.os != 'Windows'
+      - name: Run it
         shell: bash
         run: |
           tar -xzf "release/watchfire-$VERSION-$PLATFORM.tar.gz"
@@ -186,19 +182,10 @@ jobs:
           else
             echo "No Rosetta on this runner: the Intel build is signed but wasn't run."
           fi
-      - name: Run it (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Expand-Archive "release/watchfire-$env:VERSION-$env:PLATFORM.zip" -DestinationPath .
-          $exe = "watchfire-$env:VERSION-$env:PLATFORM/watchfire.exe"
-          $got = & $exe --version
-          if ($got -ne $env:VERSION) { throw "--version said '$got', not '$env:VERSION'" }
-          & $exe --help
 
   release:
     if: github.ref_type == 'tag'
-    needs: [build, windows]
+    needs: [build, windows, check]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -246,7 +233,9 @@ jobs:
 
           **Linux:** \`tar -xzf watchfire-$VERSION-linux-x64.tar.gz && ./watchfire-$VERSION-linux-x64/watchfire\`
 
-          Your keeper (your key, and your game) is kept in your home folder, not next to the program, so a new version picks up where you left off. \`watchfire --help\` lists the rest. Each download has the licences of everything inside it. \`SHA256SUMS.txt\` has the checksums.
+          **Your keeper** (your key, and your game) is kept in your home folder, not next to the program, so a new version picks up where you left off. It's the only copy: back it up the first time you play (in the game, **Y** then **K** shows its 12 words; \`watchfire import\` and those words bring it back on another computer).
+
+          The game tells you on its main screen when a newer version is out. \`watchfire --help\` lists the rest. Each download has the licences of everything inside it. \`SHA256SUMS.txt\` has the checksums.
           EOF
       - name: Publish
         run: |

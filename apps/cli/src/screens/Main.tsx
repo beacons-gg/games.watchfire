@@ -6,7 +6,15 @@ import { BurnBar, cell, FlameView, Frame, grow, Keys, Message, placeCell, TimeLe
 
 type MainGo = "world" | "light" | "news" | "you" | "help" | "watch" | "servers" | "online";
 
-export function Main(props: { game: Game; session: Session; go(screen: MainGo): void; open(fireId: string): void; quit(): void }) {
+export function Main(props: {
+  game: Game;
+  session: Session;
+  go(screen: MainGo): void;
+  open(fireId: string): void;
+  quit(): void;
+  /** A newer release is out: the line to show. */
+  newVersion?: string | null;
+}) {
   const { game, session } = props;
   const { width, height } = useSize();
   const flameRows = height >= 40 ? 8 : height >= 30 ? 6 : 4;
@@ -15,8 +23,11 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
   const ashes = game.fires
     .filter((f) => f.phase === "ash" && game.blocker("rake", f) === null)
     .sort((a, b) => b.outAt - a.outAt);
+  // The local game reminds a keeper to write down their 12 words until they have (You → K).
+  const backUp = !!session.keyHint && !!session.revealPhrase && !game.isGuest && !game.keeper.phraseSeen;
+  const notes = (game.watchUncovered ? 1 : 0) + (ashes.length ? 1 : 0) + (backUp ? 1 : 0) + (props.newVersion ? 1 : 0);
   // Rows left for the fire list and the news after everything fixed on the screen.
-  const free = height - 15 - flameRows - (game.watchUncovered ? 1 : 0) - (ashes.length ? 1 : 0);
+  const free = height - 15 - flameRows - notes;
   const listRows = Math.max(3, Math.min(9, free));
   const newsRows = Math.max(1, free - listRows + 1);
 
@@ -128,6 +139,16 @@ export function Main(props: { game: Game; session: Session; go(screen: MainGo): 
       {game.watchUncovered && watch ? (
         <Text color="#fde68a" wrap="truncate-end">
           {uncoveredText(watch.name)} (S)
+        </Text>
+      ) : null}
+      {backUp ? (
+        <Text color="#fde68a" wrap="truncate-end">
+          Your keeper lives only on this computer. Write down its 12 words: Y, then K.
+        </Text>
+      ) : null}
+      {props.newVersion ? (
+        <Text color="#a8a29e" wrap="truncate-end">
+          {props.newVersion}
         </Text>
       ) : null}
       <Box marginTop={1} flexDirection="column">

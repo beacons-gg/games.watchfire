@@ -106,6 +106,8 @@ export interface Game {
   setMessage(m: string): void;
   setWatch(place: WatchPlace): Promise<void>;
   markKeyHintSeen(): Promise<void>;
+  /** The keeper has seen their recovery phrase (You → K), so the local game stops asking. */
+  markPhraseSeen(): Promise<void>;
   /** Distances in kilometres or miles, as the keeper chose (You → U). */
   units: Units;
   setUnits(units: Units): Promise<void>;
@@ -571,13 +573,14 @@ export function useGame(session: Session): Game {
 
   const setWatch = useCallback(async (watch: WatchPlace) => saveKeeper({ ...keeperRef.current, watch }), [saveKeeper]);
   const markKeyHintSeen = useCallback(async () => saveKeeper({ ...keeperRef.current, toldKeyHint: true }), [saveKeeper]);
+  const markPhraseSeen = useCallback(async () => saveKeeper({ ...keeperRef.current, phraseSeen: true }), [saveKeeper]);
   const setUnits = useCallback(async (units: Units) => saveKeeper({ ...keeperRef.current, units }), [saveKeeper]);
 
   return {
     status, error, fires, placeOf: (id: string) => places.current.placeOf(id), keeper, me, isGuest, guestHint, logsLeft: left, news, freshNews, message, busy,
     servers, serversFixed, multiServer, readOnlyReason, lastSeen, watchUncovered, uncovered, serversNeedingLook, isQuiet,
     serverOf, serverNameOf, lightTargets, moveServer, requestJoin, nameOf, wantNames, hasProfileName: !!me && names.current.hasName(me), blocker,
-    setMessage, setWatch, markKeyHintSeen, units: keeper.units ?? "km", setUnits, refresh, refreshFire, watchFire, feed, light, takeEmber, warm, rake,
+    setMessage, setWatch, markKeyHintSeen, markPhraseSeen, units: keeper.units ?? "km", setUnits, refresh, refreshFire, watchFire, feed, light, takeEmber, warm, rake,
     setName, addServer, removeServer, setServerMode,
   };
 }

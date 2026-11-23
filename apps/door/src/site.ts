@@ -3,7 +3,7 @@
 
 import type { Server } from "node:http";
 import { log } from "./env.ts";
-import { BIND, FIRE_TYPE, JOIN, PUBLIC_PORT, SERVERS, WEB_PORT, WEB_ROOT } from "./settings.ts";
+import { BIND, DOWNLOAD, FIRE_TYPE, JOIN, PUBLIC_PORT, SERVERS, WEB_PORT, WEB_ROOT } from "./settings.ts";
 import { openStore, type DoorStore } from "./store.ts";
 import { startWeb } from "./web.ts";
 import { WorldWatch } from "./world.ts";
@@ -23,6 +23,7 @@ export function startSite(store: DoorStore, fetch: typeof globalThis.fetch, door
     report: () => world.report(),
     online: () => door?.online() ?? null,
     join: (host) => JOIN ?? (door ? `ssh ${PUBLIC_PORT === 22 ? "" : `-p ${PUBLIC_PORT} `}${host}` : null),
+    download: DOWNLOAD,
     log,
   });
 }
@@ -31,7 +32,7 @@ export function startSite(store: DoorStore, fetch: typeof globalThis.fetch, door
 export async function siteAlone(): Promise<void> {
   const store = await openStore();
   const web = startSite(store, fetch, null);
-  log("site-only", { store: store.where, servers: SERVERS, join: JOIN ?? null });
+  log("site-only", { store: store.where, servers: SERVERS, join: JOIN ?? null, download: DOWNLOAD });
   const shutdown = () => {
     web.close();
     void store.close().finally(() => process.exit(0));

@@ -3,6 +3,7 @@ import { render } from "ink";
 import { loadOrCreateWallet, loadWallet, revealRecoveryPhrase, importWalletFromPhrase } from "@beaconsgg/client-sdk";
 import { DEFAULT_SERVERS } from "@watchfire/core";
 import { App } from "./app.tsx";
+import { newVersion } from "./update.ts";
 import { configDir, detectColorDepth, fileKeeperStore, fileKeyStore } from "./local.ts";
 import { emptyKeeper, localDay, memoryKeeperStore, type KeeperState, type Session } from "./session.ts";
 import { createInterface } from "node:readline/promises";
@@ -28,7 +29,12 @@ Usage:
   watchfire --watch-only    look around as a guest, without your keeper
   watchfire --help | --version
 
-Your keeper lives in ${configDir()} (override with WATCHFIRE_HOME).
+Your keeper lives in ${configDir()} (override with WATCHFIRE_HOME), and only
+there: back it up with \`watchfire phrase\` (or You, then K, in the game).
+
+Once a day the game asks GitHub whether a newer version is out, and says so on
+the main screen. WATCHFIRE_NO_UPDATE_CHECK=1 turns that off.
+
 City names from GeoNames (https://www.geonames.org), CC BY 4.0.`;
 
 async function main(argv: string[]) {
@@ -50,7 +56,9 @@ async function main(argv: string[]) {
     if (!phrase) return console.log("No keeper yet. Run `watchfire` to make one.");
     console.log("Your keeper's recovery phrase. Anyone with these words can play as you:\n");
     console.log(`  ${phrase}\n`);
-    console.log("Write it down and keep it somewhere safe.");
+    console.log("Write it down and keep it somewhere safe. On another computer, `watchfire import` brings your keeper back.");
+    const store = await fileKeeperStore();
+    await store.save({ ...(await store.load()), phraseSeen: true });
     return;
   }
 
@@ -90,6 +98,8 @@ async function main(argv: string[]) {
     colorDepth: detectColorDepth(),
     today: () => localDay(),
     keyHint: configDir(),
+    ...(watchOnly ? {} : { revealPhrase: () => revealRecoveryPhrase(keys) }),
+    ...(process.env.WATCHFIRE_NO_UPDATE_CHECK ? {} : { newVersion: () => newVersion(VERSION, { dir: configDir() }) }),
     ...(watchOnly ? { guestHint: "You're only watching. Run watchfire without --watch-only to play." } : {}),
     ...(process.env.WATCHFIRE_FIRE_TYPE ? { fireType: process.env.WATCHFIRE_FIRE_TYPE } : {}),
   };

@@ -37,7 +37,7 @@ listing/tools/shoot.sh http://localhost:8099/ listing/images/6-website.png
 listing/tools/crop.sh http://localhost:8099/ 720 listing/images/4-website-map.png
 ```
 
-Set `WATCHFIRE_JOIN` to a public door's command to show it in the page's join box.
+Set `WATCHFIRE_JOIN` to a public door's command to show it beside the download button.
 
 **Icon and banner.** Pixel art from the game's flame palette and spread:
 

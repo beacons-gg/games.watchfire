@@ -1,8 +1,8 @@
 // The world as the website shows it: everything here is already public on Beacon (any reader can
 // see it), and nothing in it lets anyone act. Types only at the top, so a browser can import them.
 
-/** What the door's world watcher puts together; the website server adds `join` and `online`. */
-export type WorldLook = Omit<WorldReport, "join" | "online">;
+/** What the door's world watcher puts together; the website server adds `join`, `download` and `online`. */
+export type WorldLook = Omit<WorldReport, "join" | "download" | "online">;
 
 /** What the dashboard reads from `/api/world`. The rules themselves come from core's tuning. */
 export interface WorldReport {
@@ -10,6 +10,8 @@ export interface WorldReport {
   at: number;
   /** How to come in: `ssh -p 2222 <host>`. Null when this site has no door to point to. */
   join: string | null;
+  /** Where to download the game for your own computer (the latest release), or null for nowhere. */
+  download: string | null;
   /** Callers on the door right now, or null when there's no door here (the site runs alone). */
   online: number | null;
   /** Burning fires first, the closest to going out first; then the dark ones, newest first. */

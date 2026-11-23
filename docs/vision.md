@@ -10,7 +10,7 @@ Watchfire is a door game: a small, persistent, turn-limited game you drop into f
 
 We first considered a web game for the beacons.gg home page and decided against it:
 
-- **Identity friction.** Writing to Beacon needs a wallet. In a browser that means a passphrase prompt, which kills "in and out in 30 seconds." A CLI can create the player's keys silently on first run and keep them in a file only the player can read.
+- **Identity friction.** Writing to Beacon needs a wallet. In a browser that means a passphrase prompt, which kills "in and out in 30 seconds." The game on the player's own computer creates their keys silently on first run and keeps them in a file only the player can read (and asks them, once, to write down the twelve words that back it up).
 - **Fit.** Door games were always terminal games. The ANSI look is the point, not a constraint.
 - **The website still gets its moment.** Reads from a Beacon server are open, so a read-only website needs no wallet at all. That website is the piece that could sit on the beacons.gg home page: "the network, live."
 
@@ -26,7 +26,7 @@ We first considered a web game for the beacons.gg home page and decided against 
 1. **One obvious action.** Feed a fire. Everything else is optional.
 2. **The world moves while you're away.** Fires die on their own. The news log tells you what happened.
 3. **The server holds the rules.** Every rule that matters between players is in the room policy, so a modified client can't cheat it (see [beacon-integration.md](beacon-integration.md#what-the-server-enforces-and-what-it-doesnt)).
-4. **Zero setup.** `ssh` in, or one `npx` command. No sign-up.
+4. **Zero setup.** Download one file and run it, or `ssh` in to a door. No installer, no sign-up.
 
 ## Who it's for
 

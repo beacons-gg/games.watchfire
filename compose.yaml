@@ -21,13 +21,14 @@ services:
     ports:
       # Players dial ${WATCHFIRE_DOOR_PUBLIC_PORT}; 22 if this host's own sshd has moved elsewhere.
       - "${WATCHFIRE_DOOR_PUBLIC_PORT:-2222}:2222"
-      # The website: the game explained, the map of fires, the watch log, how to join.
+      # The website: the game explained, the map of fires, the watch log, how to play.
       - "${WATCHFIRE_WEB_PUBLIC_PORT:-8080}:8080"
     environment:
       # The door's settings, from .env (or the host's settings page) when they're set; unset ones
       # take the door's own defaults. Named one by one, so the secrets reach it only as files.
       WATCHFIRE_SERVERS:
       WATCHFIRE_JOIN:
+      WATCHFIRE_DOWNLOAD:
       WATCHFIRE_DOOR_MAX_SESSIONS:
       WATCHFIRE_DOOR_MAX_PER_IP:
       WATCHFIRE_DOOR_IDLE_MINUTES:

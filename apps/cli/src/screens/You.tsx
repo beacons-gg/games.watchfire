@@ -10,9 +10,11 @@ export function You(props: { game: Game; session: Session; back(): void }) {
   const { game, session } = props;
   const { height } = useSize();
   const [naming, setNaming] = useState(false);
-  // Door only: "take your keeper home" asks first, then shows the phrase.
+  // The recovery phrase: asked first, then shown. At the door it's "take your keeper home"; on the
+  // player's own computer it's the keeper's only backup.
   const [home, setHome] = useState<null | "ask" | { phrase: string }>(null);
-  const revealPhrase = game.isGuest ? undefined : session.door?.revealPhrase;
+  const revealPhrase = game.isGuest ? undefined : session.revealPhrase;
+  const atDoor = !!session.door;
   const me = game.me;
 
   useEffect(() => game.wantNames([me ?? undefined]), [game.wantNames, me]);
@@ -25,7 +27,10 @@ export function You(props: { game: Game; session: Session; back(): void }) {
           // Only if they're still being asked: a key pressed meanwhile said no. A failure must not
           // reject unhandled, which would bring down the door and every player on it.
           revealPhrase().then(
-            (phrase) => setHome((h) => (h === "ask" && phrase ? { phrase } : null)),
+            (phrase) => {
+              setHome((h) => (h === "ask" && phrase ? { phrase } : null));
+              if (phrase && !game.keeper.phraseSeen) void game.markPhraseSeen();
+            },
             () => setHome(null),
           );
           return;
@@ -43,11 +48,15 @@ export function You(props: { game: Game; session: Session; back(): void }) {
 
   if (home) {
     return (
-      <Frame node={session.node} title="TAKE YOUR KEEPER HOME">
+      <Frame node={session.node} title={atDoor ? "TAKE YOUR KEEPER HOME" : "BACK UP YOUR KEEPER"}>
         {home === "ask" ? (
           <>
             <Text>This shows your keeper's recovery phrase: 12 words that are your keeper.</Text>
-            <Text color="#a8a29e">With them you can play from your own machine (`watchfire import`) and own your keys.</Text>
+            <Text color="#a8a29e">
+              {atDoor
+                ? "With them you can play from your own machine (`watchfire import`) and own your keys."
+                : "Your keeper lives only on this computer. Write the words down: on a new computer, they bring it back."}
+            </Text>
             <Text color="#fde68a">Anyone who sees them can play as you. Make sure nobody is watching your screen.</Text>
             <Box marginTop={1}>
               <Text>
@@ -63,8 +72,14 @@ export function You(props: { game: Game; session: Session; back(): void }) {
                 {home.phrase}
               </Text>
             </Box>
-            <Text color="#a8a29e">On your own machine: `watchfire import`, then type these words.</Text>
-            <Text color="#a8a29e">The door keeps a copy too, so both can play as you. Keep the words somewhere safe.</Text>
+            <Text color="#a8a29e">
+              {atDoor ? "On your own machine: `watchfire import`, then type these words." : "On another computer: `watchfire import`, then type these words."}
+            </Text>
+            <Text color="#a8a29e">
+              {atDoor
+                ? "The door keeps a copy too, so both can play as you. Keep the words somewhere safe."
+                : "Keep them somewhere safe and private, like a password: on paper, or in a password manager."}
+            </Text>
             <Box marginTop={1}>
               <Text color="#78716c">Any key to hide it.</Text>
             </Box>
@@ -90,7 +105,7 @@ export function You(props: { game: Game; session: Session; back(): void }) {
           <Keys
             keys={[
               ["N", "ame", game.isGuest],
-              ...(revealPhrase ? [["K", "eeper home"] as [string, string]] : []),
+              ...(revealPhrase ? [["K", atDoor ? "eeper home" : "eeper backup"] as [string, string]] : []),
               ["U", `nits: ${game.units === "km" ? "km" : "miles"}`],
               ["Esc", " back"],
             ]}

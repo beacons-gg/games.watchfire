@@ -23,6 +23,13 @@ export interface Session {
   today(): string;
   /** Where the wallet lives, shown to the player once. Absent in the door. */
   keyHint?: string;
+  /** Keepers only: their 12-word recovery phrase (You → K), to back the keeper up or take it home. */
+  revealPhrase?(): Promise<string | null>;
+  /**
+   * The local game only: a line to show when a newer Watchfire is out, or null. The door is
+   * updated by its sysop, so it has none.
+   */
+  newVersion?(): Promise<string | null>;
   /** What a guest is told when they try to act. */
   guestHint?: string;
   /** Room type to play; tests and spikes use their own. */
@@ -43,8 +50,6 @@ export interface Door {
   onScreen(screen: ScreenName): void;
   /** The sysop's announcement, shown when the player arrives. */
   motd?: string;
-  /** Keepers only: their recovery phrase, so they can take their keeper home. */
-  revealPhrase?(): Promise<string | null>;
   /**
    * Keepers only: page another node with one line. `to` is who was on that node when the player
    * chose them (a node number is reused once they leave). Returns why not, or null once it's sent.
@@ -102,6 +107,8 @@ export interface KeeperState extends DailyLogs {
   servers?: SavedServer[];
   /** Set once the player has seen where their key lives. */
   toldKeyHint?: boolean;
+  /** Set once the player has seen their recovery phrase: until then the local game reminds them. */
+  phraseSeen?: boolean;
   /** Distances in kilometres (the default) or miles. */
   units?: Units;
 }

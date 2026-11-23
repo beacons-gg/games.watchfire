@@ -30,6 +30,8 @@ export interface WebOptions {
   online(): number | null;
   /** The join command for a visitor who reached the site at `host` (from their Host header), or null for none. */
   join(host: string): string | null;
+  /** Where the site sends visitors to download the game, or null for nowhere. */
+  download: string | null;
   log(event: string, fields?: object): void;
 }
 
@@ -57,7 +59,7 @@ export function startWeb(opts: WebOptions): Server {
     if (url.pathname === "/api/world") {
       const report = opts.report();
       if (!report) return send(res, 503, "application/json", JSON.stringify({ error: "The door hasn't looked at the world yet." }), { "retry-after": "5" });
-      const body: WorldReport = { ...report, join: opts.join(visitorHost(req)), online: opts.online() };
+      const body: WorldReport = { ...report, join: opts.join(visitorHost(req)), download: opts.download, online: opts.online() };
       return send(res, 200, "application/json", JSON.stringify(body), { "cache-control": "no-store" });
     }
     // A file from the build, or the page itself for anything else (one page, no routes). A build

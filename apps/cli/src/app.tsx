@@ -27,6 +27,11 @@ export function App(props: { session: Session; onQuit?: () => void }) {
   const { exit } = useApp();
   const [screen, setScreen] = useState<Screen>({ name: "main" });
   const checkedFirstRun = useRef(false);
+  // A newer release, for the main screen (the local game only; see update.ts).
+  const [newVersion, setNewVersion] = useState<string | null>(null);
+  useEffect(() => {
+    void session.newVersion?.().then(setNewVersion, () => {});
+  }, []);
 
   // Tell the door what this player is doing, for who's online.
   useEffect(() => {
@@ -92,7 +97,7 @@ export function App(props: { session: Session; onQuit?: () => void }) {
             setScreen({ name: "main" });
             // A first run lands on the main screen with the key hint, or else the door's greeting.
             if (screen.firstRun && place && session.keyHint && !game.keeper.toldKeyHint) {
-              game.setMessage(`Your keeper's key is in ${session.keyHint}. Back it up: watchfire phrase`);
+              game.setMessage(`Your keeper lives in ${session.keyHint}, on this computer only. Back it up: You, then K.`);
               void game.markKeyHintSeen();
             } else game.setMessage(screen.firstRun ? greeting : "");
           }}
@@ -109,6 +114,7 @@ export function App(props: { session: Session; onQuit?: () => void }) {
           }}
           open={(id) => setScreen({ name: "fire", id, from: "main" })}
           quit={quit}
+          newVersion={newVersion}
         />
       );
   }

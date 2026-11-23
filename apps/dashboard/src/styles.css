@@ -228,6 +228,35 @@ button {
   font-size: 0.95rem;
 }
 
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 1.4em 0 1em;
+}
+
+.download-button {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #fb923c, #ea580c);
+  color: #1c0a02;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 0 0 4px rgb(249 115 22 / 0.12), 0 0 40px rgb(249 115 22 / 0.25);
+}
+
+.download-button:hover {
+  background: linear-gradient(180deg, #fdba74, #f97316);
+  color: #1c0a02;
+}
+
+.download-button:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
+}
+
 .join-command {
   display: flex;
   align-items: stretch;

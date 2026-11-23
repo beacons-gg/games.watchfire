@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from "react";
 import { RULES } from "./format.ts";
 
-// The flyer's words: how to play and how to join. Nothing here changes with the world, so these
+// The flyer's words: how to play and how to start. Nothing here changes with the world, so these
 // stay out of the page's once-a-second countdown renders.
 
 /** A command to type, with a Copy button. */
@@ -128,8 +128,8 @@ export const HowToPlay = memo(function HowToPlay() {
             <dd>The whole world, closest to going out first</dd>
             <dt>N</dt>
             <dd>The watch log</dd>
-            <dt>O</dt>
-            <dd>Who's online, and page them</dd>
+            <dt>Y</dt>
+            <dd>You: your embers, and your keeper's backup</dd>
             <dt>?</dt>
             <dd>The rules, in the game</dd>
             <dt>Q</dt>
@@ -150,29 +150,120 @@ function Rule(props: { title: string; children: ReactNode }) {
   );
 }
 
-const SYSTEMS = ["mac", "windows", "phone"] as const;
+const SYSTEMS = ["windows", "mac", "linux", "ssh", "phone"] as const;
 type System = (typeof SYSTEMS)[number];
+const NAMES: Record<System, string> = { windows: "Windows", mac: "Mac", linux: "Linux", ssh: "Over ssh", phone: "Phone or tablet" };
 
-/** How to come in, on a Mac or Linux, Windows, or a phone. Re-renders only when the command does. */
-export const Join = memo(function Join(props: { command: string }) {
-  const guess: System = /Windows/i.test(navigator.userAgent) ? "windows" : /iPhone|iPad|Android/i.test(navigator.userAgent) ? "phone" : "mac";
-  const [system, setSystem] = useState<System>(guess);
-  const names: Record<System, string> = { mac: "Mac or Linux", windows: "Windows", phone: "Phone or tablet" };
+/** The visitor's computer, from the browser's own description of it. */
+function guessSystem(): System {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|Android/i.test(ua)) return "phone";
+  if (/Windows/i.test(ua)) return "windows";
+  if (/Mac/i.test(ua)) return "mac";
+  if (/Linux|X11/i.test(ua)) return "linux";
+  return "windows";
+}
+
+/** The hero's download button: named for the visitor's computer. */
+export function DownloadButton(props: { href: string }) {
+  const system = guessSystem();
+  const name = system === "mac" ? "Mac" : system === "linux" ? "Linux" : "Windows";
   return (
-    <section id="join" className="band">
+    <p className="download">
+      <a className="download-button" href={props.href}>
+        Download for {system === "phone" || system === "ssh" ? "your computer" : name}
+      </a>
+      <span className="muted small">Windows, Mac and Linux · free · nothing to install</span>
+    </p>
+  );
+}
+
+/**
+ * How to start playing: download the game for your computer (most players), or, when this site has
+ * a door, come in over ssh, which is also the way in from a phone. Re-renders only when its inputs do.
+ */
+export const Play = memo(function Play(props: { download: string | null; command: string | null }) {
+  const { download, command } = props;
+  const offered = SYSTEMS.filter((s) => (s === "ssh" || s === "phone" ? !!command : !!download));
+  const guess = guessSystem();
+  const [chosen, setChosen] = useState<System>(offered.includes(guess) ? guess : offered[0]!);
+  const system = offered.includes(chosen) ? chosen : offered[0]!;
+  const atDoor = system === "ssh" || system === "phone";
+  const get = (file: string) => (
+    <>
+      Download <code>{file}</code> from{" "}
+      <a href={download ?? undefined} target="_blank" rel="noreferrer">
+        the download page
+      </a>
+    </>
+  );
+  return (
+    <section id="play" className="band">
       <div className="section-head">
-        <h2>Join</h2>
-        <p>Watchfire runs on a computer at home; you visit it over ssh, the same way programmers reach servers. It takes two minutes the first time.</p>
+        <h2>Start playing</h2>
+        <p>
+          {download
+            ? "Watchfire runs in a terminal window on your own computer: download it, unpack it, run it. Nothing to install, and it takes two minutes the first time."
+            : "Watchfire runs on a computer at home; you visit it over ssh, the same way programmers reach servers. It takes two minutes the first time."}
+        </p>
       </div>
-      <div className="tabs" role="tablist" aria-label="Your device">
-        {SYSTEMS.map((s) => (
-          <button key={s} type="button" role="tab" aria-selected={system === s} onClick={() => setSystem(s)}>
-            {names[s]}
-          </button>
-        ))}
-      </div>
+      {offered.length > 1 ? (
+        <div className="tabs" role="tablist" aria-label="Your device">
+          {offered.map((s) => (
+            <button key={s} type="button" role="tab" aria-selected={system === s} onClick={() => setChosen(s)}>
+              {NAMES[s]}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="join-steps" role="tabpanel">
-        {system === "phone" ? (
+        {system === "windows" ? (
+          <ol>
+            <li>{get("watchfire-…-windows-x64.zip")}, and unzip it (right-click it, then Extract All).</li>
+            <li>
+              Open the unzipped folder, right-click inside it and choose <strong>Open in Terminal</strong>. (On Windows 10: hold Shift
+              as you right-click, then Open PowerShell window here.)
+            </li>
+            <li>
+              Run the game:
+              <JoinCommand command=".\watchfire.exe" />
+              Windows may say it protected your PC from an unknown app: choose <strong>More info</strong>, then <strong>Run anyway</strong>.
+            </li>
+            <li>Make the window big. The game fills whatever size you give it (80 by 24 at least).</li>
+          </ol>
+        ) : system === "mac" ? (
+          <ol>
+            <li>
+              {get("watchfire-…-macos-arm64.tar.gz")} (a Mac with an Intel processor: <code>macos-x64</code>), and double-click it to
+              unpack it.
+            </li>
+            <li>
+              Open <strong>Terminal</strong> (Spotlight, type Terminal, press Enter), type <code>cd</code> and a space, drag the unpacked
+              folder onto the window, and press Enter.
+            </li>
+            <li>
+              The first time only: the game isn't notarized by Apple yet, so let your Mac run it:
+              <JoinCommand command="xattr -d com.apple.quarantine watchfire" />
+            </li>
+            <li>
+              Run the game:
+              <JoinCommand command="./watchfire" />
+            </li>
+          </ol>
+        ) : system === "linux" ? (
+          <ol>
+            <li>{get("watchfire-…-linux-x64.tar.gz")} (on ARM: <code>linux-arm64</code>).</li>
+            <li>
+              In a terminal, in the folder you downloaded it to, unpack it:
+              <JoinCommand command="tar -xzf watchfire-*-linux-x64.tar.gz" />
+            </li>
+            <li>
+              Run the game:
+              <JoinCommand command="./watchfire-*-linux-x64/watchfire" />
+            </li>
+            <li>Make the window big. The game fills whatever size you give it (80 by 24 at least).</li>
+          </ol>
+        ) : system === "phone" ? (
           <ol>
             <li>
               Install an ssh app: <strong>Termius</strong> (iPhone, iPad and Android) is free and friendly.
@@ -180,15 +271,15 @@ export const Join = memo(function Join(props: { command: string }) {
             <li>In the app, create a key (Termius: Keychain → Keys → Generate). That key will be your keeper.</li>
             <li>
               Add a host with the address and port from this command, using that key, and connect:
-              <JoinCommand command={props.command} />
+              <JoinCommand command={command ?? ""} />
             </li>
             <li>Turn the phone sideways: the game wants 80 columns.</li>
           </ol>
         ) : (
           <ol>
             <li>
-              Open {system === "windows" ? <strong>PowerShell</strong> : <strong>Terminal</strong>}
-              {system === "windows" ? " (press the Windows key, type PowerShell, press Enter)." : " (on a Mac: Spotlight, type Terminal, press Enter)."}
+              Nothing to download: you play on this site's computer, the door. Open a terminal: <strong>PowerShell</strong> on Windows,{" "}
+              <strong>Terminal</strong> on a Mac or Linux.
             </li>
             <li>
               The first time only, make yourself a key. Press Enter at each question:
@@ -196,29 +287,43 @@ export const Join = memo(function Join(props: { command: string }) {
             </li>
             <li>
               Come in:
-              <JoinCommand command={props.command} />
+              <JoinCommand command={command ?? ""} />
               The first time, ssh asks whether to trust this computer: type <code>yes</code>.
             </li>
             <li>Make the window big. The game fills whatever size you give it (80 by 24 at least).</li>
           </ol>
         )}
       </div>
-      <div className="rules two">
-        <Rule title="Your key is your keeper">
-          The door knows you by your ssh key. Come back from the same computer (or phone) and you're the same keeper, with your
-          embers and your fires. A new device with a new key is a new keeper.
-        </Rule>
-        <Rule title="No key? Come in as a guest">
-          Without a key you can still look around as a guest: see the fires, the map and the log. Guests can't lay logs; make a key
-          (step 2) when you want to play.
-        </Rule>
+      <div className={atDoor ? "rules two" : "rules"}>
+        {atDoor ? (
+          <>
+            <Rule title="Your key is your keeper">
+              The door knows you by your ssh key. Come back from the same computer (or phone) and you're the same keeper, with your
+              embers and your fires. A new device with a new key is a new keeper.
+            </Rule>
+            <Rule title="No key? Come in as a guest">
+              Without a key you can still look around as a guest: see the fires, the map and the log. Guests can't lay logs; make a
+              key when you want to play.
+            </Rule>
+            <Rule title="One seat each">
+              A keeper sits at the door once at a time, so a second window with the same key is turned away. Everyone else is welcome
+              at once: who's online (O) shows who's there, and you can page them.
+            </Rule>
+          </>
+        ) : (
+          <>
+            <Rule title="Your keeper lives on your computer">
+              The game makes your keeper the first time you play and keeps it in your home folder. Its 12 secret words (in the game:
+              Y, then K) are its backup: write them down, and they bring your keeper back on a new computer.
+            </Rule>
+            <Rule title="New versions">
+              The game tells you on its main screen when a new version is out. Download it the same way: your keeper, your embers and
+              your fires carry on.
+            </Rule>
+          </>
+        )}
         <Rule title="Leave any time">
-          Q leaves, or just close the window. Your logs are already on the fires, and they burn on without you. Sessions end on
-          their own after a few idle minutes.
-        </Rule>
-        <Rule title="One seat each">
-          A keeper sits at the door once at a time, so a second window with the same key is turned away. Everyone else is welcome
-          at once: who's online (O) shows who's there, and you can page them.
+          Q leaves, or just close the window. Your logs are already on the fires, and they burn on without you.
         </Rule>
       </div>
     </section>

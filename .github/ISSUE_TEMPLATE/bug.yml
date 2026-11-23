@@ -1,0 +1,39 @@
+name: Something's wrong
+description: The game, a door or the website doing something it shouldn't.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for telling us. **Never paste your keeper's twelve words, or the files in your Watchfire folder.** A security problem goes in a private report instead (the Security tab, then Report a vulnerability).
+  - type: dropdown
+    id: how
+    attributes:
+      label: How do you play?
+      options:
+        - The download, on Windows
+        - The download, on a Mac
+        - The download, on Linux
+        - At a door, over ssh
+        - From a checkout (pnpm play)
+        - It's the website
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`watchfire --version` (at a door, the door's address instead)."
+      placeholder: 0.0.4
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: The terminal app (Windows Terminal, macOS Terminal, iTerm2, GNOME Terminal, Termius…) and, if you know it, its size.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead. A screenshot of the terminal helps a lot.
+    validations:
+      required: true

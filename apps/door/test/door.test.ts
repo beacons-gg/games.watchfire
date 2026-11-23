@@ -159,6 +159,7 @@ test("web: the dashboard's files, /api/world, read only, nothing outside its fol
     report: () => report,
     online: () => 2,
     join: (host) => `ssh -p 2222 ${host}`,
+    download: "https://example.org/watchfire",
     log: () => {},
   });
   await once(web, "listening");
@@ -170,6 +171,7 @@ test("web: the dashboard's files, /api/world, read only, nothing outside its fol
     report = { at: 1, fires: [], news: [], partial: false };
     const world = await (await get("/api/world")).json();
     assert.equal(world.join, "ssh -p 2222 127.0.0.1", "the join command names the address the visitor used");
+    assert.equal(world.download, "https://example.org/watchfire");
     assert.equal(world.online, 2);
 
     const page = await get("/");
