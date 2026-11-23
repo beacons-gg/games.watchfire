@@ -8,7 +8,7 @@ There are two ways in: **download the game** and play on your own computer (most
 
 ## Playing on your own computer
 
-Download Watchfire from the [latest release](https://github.com/beacons-gg/watchfire/releases/latest): one file for your computer, nothing to install.
+Download Watchfire from the [latest release](https://github.com/beacons-gg/games.watchfire/releases/latest): one file for your computer, nothing to install.
 
 | Computer | Download |
 | --- | --- |

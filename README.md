@@ -8,7 +8,7 @@ The game runs on [Beacon](https://beacons.gg). The fires live in Beacon rooms, a
 
 ## Play
 
-Most players play on their own computer. Download the game for Windows, macOS or Linux from the [latest release](https://github.com/beacons-gg/watchfire/releases/latest), unpack it, and run `watchfire` in a terminal:
+Most players play on their own computer. Download the game for Windows, macOS or Linux from the [latest release](https://github.com/beacons-gg/games.watchfire/releases/latest), unpack it, and run `watchfire` in a terminal:
 
 ```sh
 tar -xzf watchfire-*-linux-x64.tar.gz && ./watchfire-*-linux-x64/watchfire   # Linux; the release notes cover Windows and macOS

@@ -35,7 +35,7 @@ test("newVersion: says so once a newer release is out, and asks GitHub at most o
     const gh = github({ tag: "v0.0.5" });
     const line = await newVersion("0.0.4", { dir, fetch: gh.fetch, now: () => now });
     assert.match(line ?? "", /^Watchfire 0\.0\.5 is out \(you have 0\.0\.4\): github\.com\/.+\/releases\/latest$/);
-    assert.deepEqual(gh.calls, ["https://api.github.com/repos/beacons-gg/watchfire/releases/latest"]);
+    assert.deepEqual(gh.calls, ["https://api.github.com/repos/beacons-gg/games.watchfire/releases/latest"]);
 
     // Later that day: from the last look, without asking.
     now += 6 * 3600_000;

@@ -34,7 +34,7 @@ ssh -p 2222 -o PubkeyAuthentication=no localhost   # without one: a guest
 | `WATCHFIRE_WEB_ROOT` | `apps/dashboard/dist` | The built website (`/app/web` in the image) |
 | `WATCHFIRE_DOOR_PUBLIC_PORT` | the door's port | The port players dial, for the website's join command (Docker maps it) |
 | `WATCHFIRE_JOIN` | `ssh -p <port> <address the visitor used>` | The join command the website shows, if it should name something else. With no door here, the door it points to; unset, the site shows no join command |
-| `WATCHFIRE_DOWNLOAD` | `https://github.com/beacons-gg/watchfire/releases/latest` | Where the website's Download button (and its how-to for Windows, Mac and Linux) points; `none` for no download |
+| `WATCHFIRE_DOWNLOAD` | `https://github.com/beacons-gg/games.watchfire/releases/latest` | Where the website's Download button (and its how-to for Windows, Mac and Linux) points; `none` for no download |
 
 The sysop's announcement (the motd) greets every player as they arrive; a change reaches players arriving within 10 seconds. With the ban list (see [Bans](#bans)), it's set with the door's own commands, which work the same on files and Postgres:
 
