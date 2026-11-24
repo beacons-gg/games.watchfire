@@ -3,6 +3,7 @@
 //
 //   node scripts/seed-fires.ts                     # on https://9q72.beacons.gg
 //   BEACON=http://localhost:3001 node scripts/seed-fires.ts
+//   WATCHFIRE_FIRE_TYPE=watchfire-dev node scripts/seed-fires.ts   # test fires, invisible to normal play
 
 import { createWallet, type Wallet } from "@beaconsgg/identity";
 import { connect, keeperName } from "@watchfire/core";
@@ -36,7 +37,9 @@ const SEEDS = [
   { name: "Lakeshore Fire", at: { lat: 43.6532, lng: -79.3832 }, logs: 4, keepers: 2, warm: 1 }, // Toronto
 ];
 
-const wf = await connect({ servers: [SERVER] });
+const TYPE = process.env.WATCHFIRE_FIRE_TYPE;
+
+const wf = await connect({ servers: [SERVER], ...(TYPE ? { type: TYPE } : {}) });
 console.log(`lighting ${SEEDS.length} fires on ${wf.servers[0]!.descriptor?.name ?? SERVER}`);
 
 for (const seed of SEEDS) {

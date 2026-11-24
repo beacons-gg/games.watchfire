@@ -2,108 +2,110 @@
 
 > Somewhere in the world, a fire is about to go out. You have three logs today.
 
-Watchfire is a BBS-style door game played in a terminal: on your own computer (one download, nothing to install), or over `ssh` at a door. Fires burn at real places on the map. Every day you get three logs to keep them alive. Fires nobody tends go dark, and nobody can keep one going alone for long, so fires live because strangers chose them. A visit takes about a minute.
+Watchfire is a BBS-style door game played in a terminal, either on your own computer or over SSH. Fires burn at real places on the map. Every day you get three logs to keep them alive. Fires nobody tends go dark, and nobody can keep one going alone for long, so fires live because strangers chose them. A visit takes about a minute.
 
-The game runs on [Beacon](https://beacons.gg). The fires live in Beacon rooms, and each room's policy holds the rules, so the server enforces them for everyone and Watchfire has no game backend of its own. A door (the SSH server) also serves a website that explains the game and shows the world's fires live.
+![The main screen: an animated fire, 22 fires burning, and the fires nearest Edinburgh with how long each has left](docs/images/main.png)
+
+Watchfire runs on [Beacon](https://beacons.gg), and it's also an example of building a game on it. Fires live in Beacon rooms, where room policies enforce the game rules. Watchfire has no game backend of its own.
 
 ## Play
 
-Most players play on their own computer. Download the game for Windows, macOS or Linux from the [latest release](https://github.com/beacons-gg/games.watchfire/releases/latest), unpack it, and run `watchfire` in a terminal:
+The easiest way to play is on your own computer. Download Watchfire for Windows, macOS, or Linux from the [latest release](https://github.com/beacons-gg/games.watchfire/releases/latest), unpack it, and run `watchfire` in a terminal. On Linux:
 
 ```sh
-tar -xzf watchfire-*-linux-x64.tar.gz && ./watchfire-*-linux-x64/watchfire   # Linux; the release notes cover Windows and macOS
+tar -xzf watchfire-*-linux-x64.tar.gz
+./watchfire-*-linux-x64/watchfire
 ```
 
-The first time, it makes your keeper and keeps it in your home folder. Back it up: in the game, **Y** then **K** shows its 12 words, which bring it back on a new computer (`watchfire import`). The game tells you on its main screen when a newer version is out. `watchfire --help` lists the rest.
+Windows and macOS each need one extra step the first time; the release notes and [how to play](docs/how-to-play.md#playing-on-your-own-computer) walk you through it.
 
-Or come in over ssh at a door someone runs, with nothing to download (the door's website shows its address). It's also the way in from a phone:
+The first time, Watchfire creates your keeper (your identity in the game) and stores it in your home folder. Back it up: in the game, **Y** then **K** shows your 12 recovery words. You can restore it on another computer with `watchfire import`.
+
+The game tells you when a newer version is available. Run `watchfire --help` for other commands.
+
+![A fire's screen: Burnley Beacon, burning, 6 of 12 logs, its keepers, and "You take an ember from Burnley Beacon. It glows in your hand."](docs/images/fire.png)
+
+### Play over SSH
+
+Watchfire also supports the old BBS tradition of *door games*: games hosted on a remote computer that you enter through a terminal connection. Connect to a Watchfire door over SSH and play without downloading anything. The door's website shows its address.
 
 ```sh
 ssh -p 2222 <the door's address>
 ```
 
-At a door your ssh key is your keeper; without one you come in as a guest who can watch but not lay logs. The rules, the keys and the step-by-step for each computer are in [docs/how-to-play.md](docs/how-to-play.md). From a checkout: `pnpm play` (see [Develop](#develop)).
+Your SSH key identifies your keeper. Without one, you enter as a guest and can watch, but not lay logs. SSH is also a convenient way to play from a phone.
+
+Both the downloaded game and SSH doors connect to the same shared world. You don't need to run a door or host a Beacon server to play.
+
+See [how to play](docs/how-to-play.md) for the rules, the keys, and step-by-step instructions for each computer.
+
+## How it uses Beacon
+
+Everything that matters between players is held by Beacon servers, so the game needs no server of its own:
+
+- **A fire is a Beacon room.** Its policy (`packages/core/src/policy.ts`) holds the rules: only logs go on, each log pushes the fire's "out" time back 4 hours, a fire holds 12 logs at most, and once it's out it's ash. The server enforces these rules for every player, so a modified client can't break them.
+- **Rewards come from the room.** Once a fire holds 5 logs, each of its keepers may take one ember, and the server makes sure it's only one.
+- **Reads are open.** Anyone can read the world without an account, which is how the website shows the fires live.
+- **Your identity is a Beacon account.** It works on every Beacon server, and your profile name shows up in other Beacon games.
+- **Other games can join in.** Players of any Beacon game can warm their hands at a fire, and do nothing else there.
+
+[docs/beacon-integration.md](docs/beacon-integration.md) has the full fire policy, what the server enforces and what it doesn't, and the gotchas we hit along the way.
 
 ## Run a door
 
-The door is one Docker image: the SSH game on port 2222 and the website on 8080, with its data in Postgres.
+A door is a shared SSH entry point into Watchfire, continuing the tradition of BBS door games. It lets people connect and play through a terminal without installing the game. Each door also serves a website showing the world's fires live.
+
+![The door's website: a world map with glowing fires, and the fires closest to going out](docs/images/website.png)
+
+Running a door is optional. Doors connect to existing Beacon servers, and players with the downloaded game connect to the same world directly.
+
+The door runs as a single Docker image, with the SSH game on port `2222` and its website on port `8080`. Its own data is stored in Postgres.
 
 ```sh
 cp .env.example .env
-echo "WATCHFIRE_MASTER_KEY=$(openssl rand -hex 32)" >> .env   # back this up off the host
+echo "WATCHFIRE_MASTER_KEY=$(openssl rand -hex 32)" >> .env
 echo "WATCHFIRE_DB_PASSWORD=$(openssl rand -hex 24)" >> .env
 docker compose up -d --build
 ssh -p 2222 localhost
 ```
 
-Backups, Dokploy, keeping data in files, an outside database, running the website alone and the sysop's commands: [docs/deploy.md](docs/deploy.md).
+Keep a secure backup of `WATCHFIRE_MASTER_KEY`: it's the only way to open the keepers the door holds.
+
+For settings, backups, Dokploy, an external database, and sysop commands, see [docs/run-a-door.md](docs/run-a-door.md).
+
+## Develop
+
+You'll need Node 24 (through nvm) and pnpm. Everything installs from npm, including Beacon's SDK (`@beaconsgg/*`).
+
+```sh
+nvm use
+pnpm install
+pnpm typecheck && pnpm test
+WATCHFIRE_FIRE_TYPE=watchfire-dev pnpm play   # play with test fires, invisible to normal play
+pnpm door             # SSH door on :2222 and its website on :8080
+```
+
+Plain `pnpm play` connects to the shared world at `9q72.beacons.gg`, so your moves affect the same fires as everyone else's.
+
+```text
+packages/core     @watchfire/core: rules, fire policy, reading the world, Beacon moves
+apps/cli          The terminal game (Ink), run locally or inside a door
+apps/door         The SSH door, its storage, and the website's server
+apps/dashboard    The website (Vite + React)
+scripts/          Checks against real Beacon servers, seed fires, local test servers
+```
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the rest: tests against real and local Beacon servers, building, and releasing. To report a security issue privately, see [SECURITY.md](SECURITY.md).
 
 ## Docs
 
 | Doc | What it covers |
 | --- | --- |
-| [how-to-play.md](docs/how-to-play.md) | For players: coming in over ssh, the rules, the keys |
-| [vision.md](docs/vision.md) | What Watchfire is, who it's for, and why it's a terminal game |
-| [game-design.md](docs/game-design.md) | The core loop, the rules and their tuning, the screens, the news, embers |
-| [beacon-integration.md](docs/beacon-integration.md) | How the game maps onto Beacon: the fire policy, what the server enforces, several servers, profiles, and the gotchas |
-| [architecture.md](docs/architecture.md) | The monorepo: the shared core, the CLI, the door, the website |
-| [ssh-door.md](docs/ssh-door.md) | The SSH door: identity, settings, where its data lives, rate limits, bans, security |
-| [deploy.md](docs/deploy.md) | Running the door in Docker or Dokploy: secrets, settings, backups, sysop commands |
-| [roadmap.md](docs/roadmap.md) | What's built, what's next, and open questions |
-| [open-source.md](docs/open-source.md) | Opening the repository: what's ready, what to decide, the steps |
-
-Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). A security problem: [SECURITY.md](SECURITY.md), privately.
-
-## Develop
-
-Node 24 through nvm, and pnpm. Everything installs from npm, Beacon's SDK (`@beaconsgg/*`) included.
-
-```sh
-nvm use
-pnpm install
-pnpm typecheck
-pnpm test             # WATCHFIRE_TEST_DATABASE_URL=postgres://… also runs the Postgres tests
-pnpm play             # the game, on 9q72.beacons.gg: real play, everyone sees your fires
-WATCHFIRE_FIRE_TYPE=watchfire-dev pnpm play   # test fires, invisible to normal play
-pnpm door             # the SSH door on :2222 (ssh -p 2222 localhost) and its website on :8080
-pnpm dashboard        # the website with live reload on :5173, reading a running door's /api/world
-pnpm build            # apps/cli/dist/watchfire.mjs (one self-contained file) and the website
-```
-
-### Releasing
-
-Set `version` in `apps/cli/package.json`, commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`. The [release workflow](.github/workflows/release.yml) checks the tag matches, runs the tests, builds executables for Windows, macOS (Apple silicon and Intel) and Linux (x64 and ARM) with Bun, and publishes them as a GitHub release. Each OS builds its own: Windows, where Bun gives the executable the game's icon and its details (name, description, version), and macOS, where `codesign` signs the Mac ones so they run (Bun's own signature on the Intel build comes out invalid). Every build except Linux on ARM is run on its own OS, the Intel Mac one under Rosetta, before anything is published. A tag with a suffix (`v0.2.0-rc.1`) makes a pre-release. `gh workflow run release.yml --ref <branch>` is a dry run: everything built and checked, nothing published. To build the same archives locally: `pnpm -C apps/cli run build && scripts/package-cli.sh 0.2.0` (off Windows, the Windows one has no icon or details; off macOS, the Mac ones keep Bun's signature).
-
-The macOS builds are ad-hoc signed, not with an Apple Developer ID, so players unblock them once (the release notes say how). Signing and notarizing is a later step.
-
-`WATCHFIRE_FIRE_TYPE` fires are only for testing: don't hand that setting to playtesters, or their fires won't show up for anyone else.
-
-Checks against real Beacon servers:
-
-```sh
-pnpm spike            # one fire from lighting to ash on 9q72.beacons.gg (about a minute)
-pnpm spike:profile    # set a name from Watchfire and check the rest of the profile survives
-node scripts/seed-fires.ts   # light a few fires around the world to play with
-
-# Two local Beacon servers (members-only and Edinburgh-only) for multi-server work.
-# BEACON_IMAGE is a Beacon 1.1 server image you can pull.
-BEACON_IMAGE=<image> pnpm servers:up
-pnpm spike:servers    # choosing a server, watch mode, asking to join and being let in
-node scripts/local-operator.ts pending | approve <did>   # play the operator
-pnpm servers:down
-BEACON=http://localhost:3001 pnpm spike   # any script against a local server
-```
-
-### Layout
-
-```
-packages/core     @watchfire/core: the rules, the fire policy, reading the world, Beacon moves
-apps/cli          the game (Ink), run locally or inside the door
-apps/door         the SSH door, its store (files or Postgres) and the website's server
-apps/dashboard    the website (Vite + React)
-scripts/          spikes, seed fires, local test servers, the city list builder
-docs/
-```
+| [how-to-play.md](docs/how-to-play.md) | Playing on your own computer or over SSH, the rules, and the keys |
+| [game-design.md](docs/game-design.md) | Why a terminal game, the core loop, the rules and their tuning, the screens, and ideas for later |
+| [beacon-integration.md](docs/beacon-integration.md) | How Watchfire uses Beacon: the fire policy, what the server enforces, several servers, profiles, and gotchas |
+| [architecture.md](docs/architecture.md) | The monorepo: the shared core, the game, the door, and the website |
+| [run-a-door.md](docs/run-a-door.md) | Running a door: Docker, settings, backups, sysop commands, and how it works |
 
 ## Credits
 

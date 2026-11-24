@@ -105,7 +105,7 @@ Fire names, and later mail, are written by other players and shown in terminals.
 
 - The local CLI uses `loadOrCreateWallet` with a file-backed store, `~/.config/watchfire/keeper-key.json` (mode 0600, like an SSH private key), so there's no passphrase prompt. The SDK warns that this entry holds the recovery phrase in plain text; we accept that for a game key, the same way `~/.ssh` does. `watchfire phrase` reveals the phrase and `watchfire import` restores one. An OS-keychain store is a later option.
 - Players without a profile name appear under a stable two-word name made from their account DID ("Quiet Heron"). See [Names and profiles](#names-and-profiles).
-- The SSH door holds wallets for its players. See [ssh-door.md](ssh-door.md#identity).
+- The SSH door holds wallets for its players. See [run-a-door.md](run-a-door.md#who-you-are).
 - A player's account is the same `did:key` on every Beacon server, so the phrase moves a player between the local CLI and the door.
 
 ## Servers the player trusts

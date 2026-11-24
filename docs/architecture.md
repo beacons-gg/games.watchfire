@@ -9,7 +9,6 @@ watchfire/
   apps/door           the SSH server that hosts apps/cli per session, and the website's server
   apps/dashboard      the website: the game explained, world map, dying fires, the watch log
   scripts/            spikes, seed fires, local test servers, the city list builder
-  docs/
 ```
 
 - **Node 24** through nvm (`.nvmrc`), pnpm workspaces, no build step in development: core, tests and scripts run under Node's type stripping, and the CLI's TSX runs under `tsx`. `pnpm typecheck` runs `tsc`; `pnpm test` runs `node --test`.
@@ -60,11 +59,11 @@ Also: `newsBetween`/`snapshotOf` (the news), `safeText`/`stripControls` (player 
 
 ## SSH door (`apps/door`)
 
-An `ssh2` server that renders the CLI's Ink app (`watchfire/app`, exported by `apps/cli` for the workspace) into each SSH channel, with a `Session` per player: a custodial keeper (or a guest) with its `revealPhrase`, a shared paced `fetch`, a UTC day, and its `door` extras (`online`, `onScreen`, `motd`, pages). What it keeps (host key, keepers, motd, bans, the website's watch log) goes through one `DoorStore` (`store.ts`): files in its home folder, or Postgres. The website (`site.ts`) runs inside the door or, with `WATCHFIRE_DOOR_PORT=0`, alone. See [ssh-door.md](ssh-door.md).
+An `ssh2` server that renders the CLI's Ink app (`watchfire/app`, exported by `apps/cli` for the workspace) into each SSH channel, with a `Session` per player: a custodial keeper (or a guest) with its `revealPhrase`, a shared paced `fetch`, a UTC day, and its `door` extras (`online`, `onScreen`, `motd`, pages). What it keeps (host key, keepers, motd, bans, the website's watch log) goes through one `DoorStore` (`store.ts`): files in its home folder, or Postgres. The website (`site.ts`) runs inside the door or, with `WATCHFIRE_DOOR_PORT=0`, alone. See [run-a-door.md](run-a-door.md#how-it-works).
 
 ## Dashboard (`apps/dashboard`)
 
-The website, and the game's flyer: a Vite + React page served by the door (see [ssh-door.md](ssh-door.md#the-website)).
+The website, and the game's flyer: a Vite + React page served by the door (see [run-a-door.md](run-a-door.md#the-website)).
 
 - **Reads `/api/world` from the door**, not Beacon. The door already reads the world (shared across its sessions) and, with the same core code as the game (`look.ts`), labels fires with their nearest city, looks up names, and writes the watch log; the page gets all that in one small JSON (`WorldReport`, `@watchfire/core/report`). So the browser needs no Beacon SDK, no city list, and no CORS entry on any Beacon server.
 - **Shows:** the hero (the game's own flame, from `@watchfire/core/flame`, on a canvas, burning higher the more fires burn), a download button named for the visitor's computer and the door's join command (if any), today's numbers, a map of the fires (`d3-geo`, Natural Earth 1:50m, framed on the fires or the whole world), the fires closest to going out, a fire's details, the watch log, how to play (its numbers straight from core's `tuning.ts`), and how to start: download and run on Windows, a Mac or Linux, or come in over ssh (the way in from a phone).

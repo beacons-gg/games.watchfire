@@ -1,4 +1,4 @@
-// The settings the door and its website share, from the environment (see docs/ssh-door.md).
+// The settings the door and its website share, from the environment (see docs/run-a-door.md).
 
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";

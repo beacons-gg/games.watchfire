@@ -4,7 +4,7 @@
 #   COMPOSE_FILE=compose.yaml:compose.site.yaml
 #   WATCHFIRE_JOIN=ssh -p 2222 door.example.com    # the door it points to; unset shows only the download
 #
-# See docs/deploy.md.
+# See docs/run-a-door.md.
 services:
   door:
     depends_on: !reset {}

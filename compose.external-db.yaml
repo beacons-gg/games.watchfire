@@ -4,7 +4,7 @@
 #   WATCHFIRE_DOOR_DATABASE_URL=postgres://watchfire@db.example.internal:5432/watchfire
 #   WATCHFIRE_DB_PASSWORD=<that database's password>
 #
-# See docs/deploy.md.
+# See docs/run-a-door.md.
 services:
   door:
     depends_on: !reset {}

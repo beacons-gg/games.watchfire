@@ -7,7 +7,7 @@
 #   ssh -p 2222 <this host>
 #
 # On Dokploy (or any host with a settings page), put the two in its environment instead of .env.
-# To keep the data in files (a Docker volume) instead, see compose.files.yaml. See docs/deploy.md.
+# To keep the data in files (a Docker volume) instead, see compose.files.yaml. See docs/run-a-door.md.
 name: watchfire
 
 services:
@@ -58,7 +58,7 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     secrets: [db_password]
     volumes:
-      # Back it up with pg_dump (docs/deploy.md); keep the master key apart from it.
+      # Back it up with pg_dump (docs/run-a-door.md); keep the master key apart from it.
       - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U watchfire -d watchfire"]

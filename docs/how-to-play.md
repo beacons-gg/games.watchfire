@@ -56,8 +56,10 @@ The game asks **where you keep watch**: type a town or city and pick it from the
 ## A day in Watchfire
 
 1. **Look around.** The main screen shows how many fires are burning, the fires nearest you, and what happened since your last visit.
-2. **Spend your logs.** You have **3 logs a day** (a new day starts at midnight UTC). Open a fire (its number, or the World list) and press **F** to lay a log on it, or press **L** on the main screen to light a new fire somewhere and name it. Lighting a fire costs one of your logs.
+2. **Spend your logs.** You have **3 logs a day** (a new day starts at your midnight, or at midnight UTC at a door). Open a fire (its number, or the World list) and press **F** to lay a log on it, or press **L** on the main screen to light a new fire somewhere and name it. Lighting a fire costs one of your logs.
 3. **Leave.** Press **Q**, or just close the window. The fires burn on without you. Come back tomorrow and read the watch log.
+
+![The World screen: every burning fire, closest to going out first, with where it is, how long it has left, its logs, and how far away it is](images/world.png)
 
 ## The rules
 

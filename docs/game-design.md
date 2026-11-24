@@ -1,5 +1,31 @@
 # Game design
 
+> Somewhere in the world, a fire is about to go out. You have three logs today.
+
+Watchfire is a door game: a small, persistent, turn-limited game you drop into for a minute, like the games on 1990s bulletin boards. Every fire sits at a real place. A fire burns for a while on its own, each log pushes its "out" time later, and once it's out it's ash. Players come in, read the news ("The fire on Calton Hill went dark at 03:12 after 19 hours"), spend their logs, and leave.
+
+## What we want people to feel
+
+- **Ritual.** Like checking a door game each morning: what burned, what died, who kept watch.
+- **Shared stakes.** Nobody can keep a fire alive alone with three logs a day. Fires live because strangers chose them.
+- **Place.** "Calton Hill, Edinburgh", not a coordinate.
+- **Speed.** A full visit takes under a minute.
+
+## Pillars
+
+1. **One obvious action.** Feed a fire. Everything else is optional.
+2. **The world moves while you're away.** Fires die on their own. The news tells you what happened.
+3. **The server holds the rules.** Every rule that matters between players is in the room policy, so a modified client can't cheat it (see [beacon-integration.md](beacon-integration.md#what-the-server-enforces-and-what-it-doesnt)).
+4. **Zero setup.** Download one file and run it, or `ssh` in to a door. No installer, no sign-up.
+
+## Why a terminal game
+
+We first considered a web game and decided against it:
+
+- **Identity friction.** Writing to Beacon needs a wallet. In a browser that means a passphrase prompt, which kills "in and out in 30 seconds." The game on a player's own computer creates their keys silently on first run and keeps them in a file only the player can read (and asks them, once, to write down the twelve words that back it up).
+- **Fit.** Door games were always terminal games. The ANSI look is the point, not a constraint.
+- **The website still gets its moment.** Reads from a Beacon server are open, so a read-only website needs no wallet at all.
+
 ## Core loop
 
 1. **Log in.** See the banner, the news since your last visit, and your logs left today.
@@ -88,7 +114,9 @@ A reaction with the target set to the fire's kindling log. One per player per fi
 
 It's also the one thing players of other Beacon games can do at a fire. The fire's policy opens `react`, and only `react`, to every game, so a player of a map game passing a fire can stop and warm their hands, and the keepers see the warmth go up. Feeding, embers and raking stay Watchfire's. How another game does it: [beacon-integration.md](beacon-integration.md#warming-hands-from-another-game).
 
-## Sparks (later)
+## Ideas for later
+
+### Sparks
 
 Send a spark from a burning fire to light a new fire somewhere else. The spark is a Beacon scout: everyone watching sees it fly across the map. Proposed mechanics, not yet verified on a server:
 
@@ -96,9 +124,16 @@ Send a spark from a burning fire to light a new fire somewhere else. The spark i
 - The scout's report shows the spark in flight. Speed is the client's own rule (scout speed is not server-checked), but the arrival time is fixed in the room policy, so a faster-flying client changes nothing.
 - A spark costs a log from the sending fire's keeper.
 
-## Mail (later)
+### Mail
 
 Beacon's mailbox (256-character notes, available on `9q72`) is a natural fit for door-game one-liners: "thanks for keeping my fire alive."
+
+### And more
+
+- A playtest with a small group, to check the tuning.
+- Signed and notarized executables, so players don't have to unblock them; install from Homebrew, winget or Scoop.
+- A public door, for players on phones or who'd rather not download.
+- A static website that reads Beacon directly (it needs its origin in each server's `BEACON_CORS_ORIGINS`), and an indexer if fires outgrow a few hundred.
 
 ## Tone and copy
 

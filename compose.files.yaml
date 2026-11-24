@@ -3,7 +3,7 @@
 #
 #   COMPOSE_FILE=compose.yaml:compose.files.yaml
 #
-# WATCHFIRE_DB_PASSWORD isn't needed then. See docs/deploy.md.
+# WATCHFIRE_DB_PASSWORD isn't needed then. See docs/run-a-door.md.
 services:
   door:
     depends_on: !reset {}
