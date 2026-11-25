@@ -1,4 +1,18 @@
+import { FIRE_TUNING } from "./tuning.ts";
+
 export const DAY_SEC = 86400;
+
+/** The longest a fire can burn: what a full time bar means. */
+export const MAX_LIFE_SEC = FIRE_TUNING.baseSec + FIRE_TUNING.capacity * FIRE_TUNING.secPerLog;
+
+/**
+ * How full a fire's time bar is, 0..1, on a log scale up to the longest a fire can burn (30½ days),
+ * so hours, days and weeks all read differently: about 0.4 at 15 hours, 0.6 at 2 days, 0.8 at a week.
+ */
+export function burnFraction(secondsLeft: number): number {
+  if (secondsLeft <= 0) return 0;
+  return Math.min(1, Math.log1p(secondsLeft / 3600) / Math.log1p(MAX_LIFE_SEC / 3600));
+}
 
 /** Under this much time left a fire is urgent (red); under LOW_SEC, low (orange). */
 export const URGENT_SEC = 3 * 3600;

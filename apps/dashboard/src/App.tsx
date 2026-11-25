@@ -4,7 +4,7 @@ import { FlameCanvas } from "./FlameCanvas.tsx";
 import { DOWNLOAD_URL } from "@watchfire/core/tuning";
 import { DownloadButton, HowToPlay, JoinCommand, Play } from "./Guide.tsx";
 import { WorldMap } from "./WorldMap.tsx";
-import { ago, clock, DAY_SEC, duration, isLit, RULES, urgency } from "./format.ts";
+import { ago, burnFraction, clock, DAY_SEC, duration, isLit, RULES, urgency } from "./format.ts";
 import { useWorld } from "./useWorld.ts";
 
 export function App() {
@@ -179,10 +179,10 @@ function Stat(props: { label: string; value: string; tone?: string | undefined }
   );
 }
 
-/** A day of fire fills the bar, as in the game. */
+/** The time bar, on the game's log scale: full at the longest a fire can burn. */
 function BurnBar(props: { fire: ReportFire; now: number }) {
   const left = props.fire.outAt - props.now;
-  const filled = Math.max(0.04, Math.min(1, left / DAY_SEC));
+  const filled = Math.max(0.04, burnFraction(left));
   return (
     <span className="burn" aria-hidden="true">
       <span className={`burn-fill ${urgency(left)}`} style={{ width: `${filled * 100}%` }} />

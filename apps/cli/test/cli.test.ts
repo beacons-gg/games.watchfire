@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { strengthFor } from "@watchfire/core/flame";
+import { burnFraction, MAX_LIFE_SEC } from "@watchfire/core/time";
 import { Flame } from "../src/flame.ts";
 import { emptyKeeper, memoryKeeperStore } from "../src/session.ts";
 import { detectColorDepth } from "../src/local.ts";
@@ -22,11 +23,23 @@ test("flame renders exact-width rows and dies out at strength 0", () => {
   assert.equal(visible(f.render(24).join("")).trim(), "", "a dead fire draws nothing");
 });
 
-test("strengthFor: ash is 0, a day or more is full, low fires still flicker", () => {
+test("strengthFor: ash is 0, the longest life is full, low fires still flicker", () => {
   assert.equal(strengthFor(1000, "ash"), 0);
   assert.equal(strengthFor(0, "burning"), 0);
-  assert.equal(strengthFor(48 * 3600, "burning"), 1);
+  assert.equal(strengthFor(MAX_LIFE_SEC, "burning"), 1);
+  assert.ok(strengthFor(48 * 3600, "burning") < 1);
   assert.ok(strengthFor(600, "burning") > 0.3);
+});
+
+test("burnFraction: a log scale, so hours, days and weeks all read differently", () => {
+  const at = (h: number) => burnFraction(h * 3600);
+  assert.equal(at(0), 0);
+  assert.equal(at(732), 1);
+  assert.equal(at(2000), 1);
+  // A fire with a day left is no longer drawn full, and a longer one draws longer.
+  assert.ok(at(15) > 0.35 && at(15) < 0.5);
+  assert.ok(at(24) < at(43) && at(43) < at(168) && at(168) < at(500));
+  assert.ok(at(168) > 0.75 && at(168) < 0.85);
 });
 
 test("logs per day reset on a new day", () => {
