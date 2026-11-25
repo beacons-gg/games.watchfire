@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Box, Text, Transform, useAnimation, useInput, useWindowSize, type Key } from "ink";
-import { DAY_SEC, formatDuration, LOW_SEC, stripControls, URGENT_SEC, type City } from "@watchfire/core";
+import { burnFraction, formatDuration, LOW_SEC, stripControls, URGENT_SEC, type City } from "@watchfire/core";
 import { Flame } from "./flame.ts";
 
 /** The smallest screen the layout is designed for; bigger terminals get more of everything. */
@@ -62,7 +62,7 @@ export function Keys(props: { keys: [string, string, boolean?][] }) {
 export function BurnBar(props: { secondsLeft: number; ash?: boolean; width?: number }) {
   const w = props.width ?? 10;
   if (props.ash) return <Text color="#57534e">{"·".repeat(w)}</Text>;
-  const filled = Math.max(1, Math.round(w * Math.min(1, props.secondsLeft / DAY_SEC)));
+  const filled = Math.max(1, Math.round(w * burnFraction(props.secondsLeft)));
   const color = props.secondsLeft < URGENT_SEC ? "#ef4444" : props.secondsLeft < LOW_SEC ? "#f97316" : "#fbbf24";
   return (
     <Text>

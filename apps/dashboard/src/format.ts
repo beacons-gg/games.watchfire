@@ -3,7 +3,7 @@ import { spanText } from "@watchfire/core/time";
 import type { ReportFire } from "@watchfire/core/report";
 
 // The game's own time words and thresholds, so the site and the terminal agree.
-export { ago, clock, DAY_SEC, formatDuration as duration, urgency } from "@watchfire/core/time";
+export { ago, burnFraction, clock, DAY_SEC, formatDuration as duration, urgency } from "@watchfire/core/time";
 
 /** The rules, from the tuning the game itself uses, in hours for people. */
 export const RULES = {

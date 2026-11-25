@@ -2,7 +2,7 @@
 // the classic "doom fire" spread. Each pixel holds a heat level; heat rises from the bottom row,
 // cooling and drifting as it goes. It imports only time.ts (no imports either), so a browser can take it.
 
-import { DAY_SEC } from "./time.ts";
+import { burnFraction } from "./time.ts";
 
 /** 37 heat levels, black through red and orange to near-white. */
 export const FLAME_PALETTE: readonly (readonly [number, number, number])[] = [
@@ -57,8 +57,8 @@ export class FlameSim {
   }
 }
 
-/** How strong a fire looks: full for a day or more of fire, fading to embers, nothing in ash. */
+/** How strong a fire looks: as full as its time bar, fading to embers, nothing in ash. */
 export function strengthFor(secondsLeft: number, phase: "burning" | "ash"): number {
   if (phase === "ash" || secondsLeft <= 0) return 0;
-  return 0.35 + 0.65 * Math.min(1, secondsLeft / DAY_SEC);
+  return 0.35 + 0.65 * burnFraction(secondsLeft);
 }
