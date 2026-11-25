@@ -165,6 +165,10 @@ test("newsBetween reports lit, fed, milestones and fires gone dark", async () =>
   // A fire missing because its server didn't answer (or was removed) is not news.
   const quiet = newsBetween(prev, cur, { ...opts, answered: ["elsewhere"] }).map((l) => l.kind);
   assert.ok(!quiet.includes("vanished"));
+  // "Full" is news at each fire's own cap.
+  const old = snapshotOf([fire({ id: "o", logs: 11, capacity: 12 }), fire({ id: "n", logs: 11, capacity: 180 })], 5000);
+  const now = snapshotOf([fire({ id: "o", logs: 12, capacity: 12 }), fire({ id: "n", logs: 12, capacity: 180 })], 6000);
+  assert.deepEqual(newsBetween(old, now, { emberAt: 5, capacity: 180 }).map((l) => `${l.fireId}:${l.text.includes("full")}`), ["o:true", "n:false"]);
 });
 
 test("readFire judges the phase by the clock, not the stored phase", () => {
@@ -188,6 +192,25 @@ test("readFire judges the phase by the clock, not the stored phase", () => {
   assert.equal(burning.warmth, 1);
   assert.deepEqual(burning.warmedBy, ["did:m"]);
   assert.equal(readFire(room, 250).phase, "ash");
+  // Each fire holds what its own policy says: fires lit before the cap was raised keep 12.
+  assert.equal(burning.capacity, FIRE_TUNING.capacity);
+  assert.equal(readFire({ ...room, policy: { accept: { capacity: 12 } } }, 150).capacity, 12);
+});
+
+test("a fire lives at most 30 and a half days, and the policy caps it there", () => {
+  const t = FIRE_TUNING;
+  assert.equal(t.capacity, 180);
+  assert.equal(t.baseSec + t.capacity * t.secPerLog, 732 * 3600);
+  const p = firePolicy(t, "watchfire") as any;
+  assert.equal(p.accept.capacity, 180);
+  assert.equal(p.maxContributors, 180);
+});
+
+test("spanText puts long spans in days", async () => {
+  const { spanText } = await import("../src/index.ts");
+  assert.equal(spanText(60 * 3600), "60 hours");
+  assert.equal(spanText(732 * 3600), "30 days and 12 hours");
+  assert.equal(spanText(96 * 3600), "4 days");
 });
 
 test("moveBlocker: the rules behind greyed keys and refused moves", async () => {
@@ -198,6 +221,9 @@ test("moveBlocker: the rules behind greyed keys and refused moves", async () => 
   assert.equal(moveBlocker("feed", base, ctx), null);
   assert.equal(moveBlocker("feed", base, { me, logsLeft: 0 }), MOVE_TEXT.outOfLogs);
   assert.equal(moveBlocker("feed", { ...base, logs: FIRE_TUNING.capacity }, ctx), MOVE_TEXT.feedFull);
+  // A fire lit under the old cap is full at its own 12, not today's.
+  assert.equal(moveBlocker("feed", { ...base, logs: 12, capacity: 12 }, ctx), MOVE_TEXT.feedFull);
+  assert.equal(moveBlocker("feed", { ...base, logs: 12, capacity: 180 }, ctx), null);
   assert.equal(moveBlocker("feed", { ...base, phase: "ash" }, ctx), MOVE_TEXT.feedAsh);
   assert.equal(moveBlocker("ember", base, ctx), null);
   assert.equal(moveBlocker("ember", { ...base, emberHolders: [me] }, ctx), MOVE_TEXT.emberHeld);

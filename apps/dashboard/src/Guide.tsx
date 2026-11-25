@@ -67,7 +67,7 @@ export const HowToPlay = memo(function HowToPlay() {
       <div className="rules">
         <Rule title="How long a fire burns">
           A new fire burns <strong>{r.baseHours} hours</strong> on its own, and every log adds <strong>{r.hoursPerLog} more</strong>.
-          A fire holds {r.capacity} logs at most, so every fire goes dark within {r.maxHours} hours, and someone has to light the next.
+          A fire holds {r.capacity} logs at most, so every fire goes dark within {r.maxLife}, and someone has to light the next.
         </Rule>
         <Rule title="Keepers">
           Lay a log on a fire and you're one of its keepers. One keeper can carry a fire into tomorrow; it takes two to keep pace

@@ -208,7 +208,7 @@ function FireCard(props: { fire: ReportFire; now: number; onClose(): void }) {
       <dl className="facts">
         <dt>Logs</dt>
         <dd>
-          {f.logs} of {RULES.capacity}
+          {f.logs} of {f.capacity ?? RULES.capacity}
           {f.logs >= RULES.emberAt ? " · embers ready" : ` · embers at ${RULES.emberAt}`}
         </dd>
         <dt>Keepers</dt>

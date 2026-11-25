@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { distanceKm, FIRE_TUNING, formatDistance, hostOf, safeText, serverLabel } from "@watchfire/core";
+import { capacityOf, distanceKm, formatDistance, hostOf, safeText, serverLabel } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { BurnBar, cell, Frame, grow, Keys, Message, placeCell, pointer, stepCursor, TimeLeft, useSize } from "../ui.tsx";
@@ -22,7 +22,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
   const servers = game.servers.length > 1;
   const serverW = servers ? grow(11, width, 0.15, 26) : 0;
   const nameW = grow(servers ? 18 : 20, width, 0.25, 40);
-  const nearW = grow(servers ? 10 : 20, width, 0.35, 56);
+  const nearW = grow(servers ? 8 : 18, width, 0.35, 56);
   const hosts = game.servers.filter((s) => s.state === "ok" && s.host).map((s) => s.host!);
   const shown = game.fires.filter((f) => f.phase === "burning" || game.blocker("rake", f) === null);
   const list = only ? shown.filter((f) => hostOf(f.id) === only) : shown;
@@ -73,7 +73,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
       <Text color="#78716c">
         {"  "}
         {cell("Fire", nameW)} {cell("Near", nearW)} {servers ? `${cell("Server", serverW)} ` : ""}{cell("Burn", 8)} {cell("Left", 7)}{" "}
-        {cell("Logs", 6)}
+        {cell("Logs", 8)}
         {watch ? "Away" : ""}
       </Text>
       <Box flexDirection="column" flexGrow={1}>
@@ -88,7 +88,7 @@ export function World(props: { game: Game; session: Session; open(id: string): v
               {servers ? `${cell(stale ? "not answering" : game.serverNameOf(f.id), serverW)} ` : ""}
               <BurnBar secondsLeft={f.secondsLeft} ash={ash} width={8} />{" "}
               <TimeLeft secondsLeft={f.secondsLeft} ash={ash} stale={stale} pad={7} />{" "}
-              {cell(`${f.logs}/${FIRE_TUNING.capacity}`, 6)}
+              {cell(`${f.logs}/${capacityOf(f)}`, 8)}
               {watch ? formatDistance(distanceKm(watch, f.location), game.units) : ""}
             </Text>
           );

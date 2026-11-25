@@ -1,5 +1,5 @@
 // Light a handful of real fires to play with: different places, logs, keepers and warmth, each lit
-// and fed by throwaway keepers. They burn down on their own like any fire (60 hours at the most).
+// and fed by throwaway keepers. They burn down on their own like any fire.
 //
 //   node scripts/seed-fires.ts                     # on https://9q72.beacons.gg
 //   BEACON=http://localhost:3001 node scripts/seed-fires.ts

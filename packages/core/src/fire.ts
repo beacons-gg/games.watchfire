@@ -11,6 +11,8 @@ export interface RoomLike {
   location: { lat: number; lng: number };
   placedBy?: string;
   state: Record<string, unknown>;
+  /** The policy it was lit with. Fires lit under older tuning hold fewer logs. */
+  policy?: { accept?: { capacity?: number } };
 }
 
 export interface FireView {
@@ -19,6 +21,8 @@ export interface FireView {
   location: { lat: number; lng: number };
   lighter?: string;
   logs: number;
+  /** Most logs this fire holds, from its policy. Missing on fires saved by older versions. */
+  capacity?: number;
   placedAt: number;
   outAt: number;
   /** The real phase, from the clock. The stored `phase` lags until the next op. */
@@ -61,6 +65,7 @@ export function readFire(room: RoomLike, now = nowSec()): FireView {
     location: room.location,
     lighter: room.placedBy,
     logs: num(s.logs),
+    capacity: room.policy?.accept?.capacity ?? FIRE_TUNING.capacity,
     placedAt: num(s.placedAt),
     outAt,
     phase: "burning",
@@ -74,6 +79,9 @@ export function readFire(room: RoomLike, now = nowSec()): FireView {
     readAt: now,
   }, now);
 }
+
+/** Most logs a fire holds: its own, or today's tuning for a fire saved without one. */
+export const capacityOf = (f: { capacity?: number }) => f.capacity ?? FIRE_TUNING.capacity;
 
 /** The fire as of `now`: its phase and time left come from the clock, not the stored phase. */
 export function ageFire(f: FireView, now = nowSec()): FireView {
@@ -122,7 +130,7 @@ export function moveBlocker(
   switch (move) {
     case "feed":
       if (!burning) return MOVE_TEXT.feedAsh;
-      if (f.logs >= FIRE_TUNING.capacity) return MOVE_TEXT.feedFull;
+      if (f.logs >= capacityOf(f)) return MOVE_TEXT.feedFull;
       if (ctx.logsLeft <= 0) return MOVE_TEXT.outOfLogs;
       return null;
     case "ember":
