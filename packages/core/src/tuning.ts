@@ -39,14 +39,17 @@ export interface FireTuning {
  *
  * - A lone keeper gets a fire to the next day: lighting plus 2 logs gives 12h + 3 x 4h = 24h.
  *   Alone they add 12h a day against a 24h day, so a solo fire dies around hour 36.
- * - Two keepers keep pace with the clock (6 logs = 24h a day) and can run a fire to its cap.
- * - A fire dies within 12h + 12 x 4h = 60h however hard it's fed, so the map turns over.
+ * - Two keepers keep pace with the clock (6 logs = 24h a day). Three or more build it up by 12h or
+ *   more a day, so a well-loved fire can burn for weeks.
+ * - A fire dies within 12h + 180 x 4h = 732h (30.5 days) however hard it's fed.
  * - An ember (5 logs) takes one player two days, or two players one.
+ *
+ * Fires lit before capacity went from 12 to 180 keep 12: each fire reads its own from its policy.
  */
 export const FIRE_TUNING: FireTuning = {
   baseSec: 12 * 3600,
   secPerLog: 4 * 3600,
-  capacity: 12,
+  capacity: 180,
   emberAt: 5,
   claimTtl: "2d",
 };

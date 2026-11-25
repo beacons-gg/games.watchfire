@@ -1,4 +1,5 @@
 import { FIRE_TUNING, LOGS_PER_DAY } from "@watchfire/core/tuning";
+import { spanText } from "@watchfire/core/time";
 import type { ReportFire } from "@watchfire/core/report";
 
 // The game's own time words and thresholds, so the site and the terminal agree.
@@ -11,7 +12,7 @@ export const RULES = {
   hoursPerLog: FIRE_TUNING.secPerLog / 3600,
   capacity: FIRE_TUNING.capacity,
   emberAt: FIRE_TUNING.emberAt,
-  maxHours: (FIRE_TUNING.baseSec + FIRE_TUNING.capacity * FIRE_TUNING.secPerLog) / 3600,
+  maxLife: spanText(FIRE_TUNING.baseSec + FIRE_TUNING.capacity * FIRE_TUNING.secPerLog),
 };
 
 /** Still burning at `now` (a fire's stored phase lags its clock). */

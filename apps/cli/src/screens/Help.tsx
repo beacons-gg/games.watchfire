@@ -1,5 +1,5 @@
 import { Box, Text, useInput } from "ink";
-import { FIRE_TUNING, LOGS_PER_DAY } from "@watchfire/core";
+import { FIRE_TUNING, LOGS_PER_DAY, spanText } from "@watchfire/core";
 import type { Session } from "../session.ts";
 import { Frame, Keys } from "../ui.tsx";
 
@@ -15,7 +15,7 @@ export function Help(props: { session: Session; back(): void }) {
         <Text> </Text>
         <Text>• You get <Text color="#fbbf24">{LOGS_PER_DAY} logs a day</Text>. Lay them on any fire, or spend one to light a new fire.</Text>
         <Text>• A new fire burns <Text color="#fbbf24">{h(t.baseSec)}</Text> on its own. Every log adds <Text color="#fbbf24">{h(t.secPerLog)}</Text>.</Text>
-        <Text>• A fire holds {t.capacity} logs at most, so every fire goes dark within {h(t.baseSec + t.capacity * t.secPerLog)}.</Text>
+        <Text>• A fire holds {t.capacity} logs at most, so every fire goes dark within {spanText(t.baseSec + t.capacity * t.secPerLog)}.</Text>
         <Text>• Lay a log and you're one of its <Text color="#fde68a">keepers</Text>.</Text>
         <Text>• Once a fire holds {t.emberAt} logs, each keeper may take <Text color="#f97316">one ember</Text>.</Text>
         <Text>• When it goes dark, keepers can rake their logs from the ashes.</Text>

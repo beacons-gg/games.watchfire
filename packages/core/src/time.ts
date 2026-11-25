@@ -23,6 +23,15 @@ export function formatDuration(sec: number): string {
   return `${s}s`;
 }
 
+/** A long span in words: "60 hours", or "30 days and 12 hours" from three days up. */
+export function spanText(sec: number): string {
+  const hours = Math.round(sec / 3600);
+  if (hours < 72) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  const d = Math.floor(hours / 24);
+  const h = hours % 24;
+  return `${d} days${h ? ` and ${h} hour${h === 1 ? "" : "s"}` : ""}`;
+}
+
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 const hhmm = (d: Date) => d.toTimeString().slice(0, 5);
 

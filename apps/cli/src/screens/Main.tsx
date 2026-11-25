@@ -1,5 +1,5 @@
 import { Box, Text, useInput } from "ink";
-import { ago, distanceKm, FIRE_TUNING, formatDistance, LOGS_PER_DAY, safeText, uncoveredText } from "@watchfire/core";
+import { ago, capacityOf, distanceKm, formatDistance, LOGS_PER_DAY, safeText, uncoveredText } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { BurnBar, cell, FlameView, Frame, grow, Keys, Message, placeCell, TimeLeft, useSize } from "../ui.tsx";
@@ -62,10 +62,10 @@ export function Main(props: {
   const latest = game.news.slice(-newsRows).reverse();
   const strength = game.status !== "ready" ? 0.3 : burning.length === 0 ? 0.12 : 0.55 + Math.min(0.45, burning.length / 40);
   const logDots = "●".repeat(game.logsLeft) + "○".repeat(LOGS_PER_DAY - game.logsLeft);
-  // At 80 columns the name, place and bar leave room for "12/12 logs · 12,345 km"; the keepers
+  // At 80 columns the name, place and bar leave room for "180/180 logs · 12,345 km"; the keepers
   // show from about 100. With several servers, the server's name squeezes the place.
   const nameW = grow(17, width, 0.2, 40);
-  const placeW = grow(game.multiServer ? 12 : 16, width, 0.25, 50);
+  const placeW = grow(game.multiServer ? 10 : 14, width, 0.25, 50);
   const barW = grow(8, width, 0.05, 20);
   const serverW = grow(12, width, 0.1, 24);
 
@@ -165,7 +165,7 @@ export function Main(props: {
               <TimeLeft secondsLeft={f.secondsLeft} stale={seen !== null} pad={8} />
               {game.multiServer ? <Text color="#78716c">{cell(game.serverNameOf(f.id), serverW)} </Text> : null}
               <Text color="#a8a29e">
-                {f.logs}/{FIRE_TUNING.capacity} logs
+                {f.logs}/{capacityOf(f)} logs
                 {km === null ? "" : ` · ${formatDistance(km, game.units)}`} ·{" "}
                 {seen !== null ? `last seen ${ago(seen)}` : `${f.keepers.length} kept`}
               </Text>

@@ -66,7 +66,7 @@ The game asks **where you keep watch**: type a town or city and pick it from the
 | | |
 | --- | --- |
 | **Burning** | A new fire burns **12 hours** on its own. Every log adds **4 hours**. |
-| **Full** | A fire holds **12 logs** at most, so every fire goes dark within **60 hours**. Someone always has to light the next one. |
+| **Full** | A fire holds **180 logs** at most, so every fire goes dark within **30½ days**. Fires lit before 0.0.6 hold 12. |
 | **Keepers** | Lay a log on a fire and you become one of its keepers. |
 | **Embers** | Once a fire holds **5 logs**, each of its keepers may take **one ember** (**E** at the fire). Embers are your record of the fires you helped keep: see them under **Y**ou. |
 | **Ashes** | When a fire goes dark, its keepers can **rake** their logs back from the ashes (**R**) for two days, and find a cinder with them: a record of the fires they saw to the end. The main screen tells you when you have ashes to rake (**A** opens the fire), and they're listed at the bottom of the World. |

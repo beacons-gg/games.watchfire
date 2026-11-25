@@ -43,7 +43,7 @@ See [how to play](docs/how-to-play.md) for the rules, the keys, and step-by-step
 
 Everything that matters between players is held by Beacon servers, so the game needs no server of its own:
 
-- **A fire is a Beacon room.** Its policy (`packages/core/src/policy.ts`) holds the rules: only logs go on, each log pushes the fire's "out" time back 4 hours, a fire holds 12 logs at most, and once it's out it's ash. The server enforces these rules for every player, so a modified client can't break them.
+- **A fire is a Beacon room.** Its policy (`packages/core/src/policy.ts`) holds the rules: only logs go on, each log pushes the fire's "out" time back 4 hours, a fire holds 180 logs at most, and once it's out it's ash. The server enforces these rules for every player, so a modified client can't break them.
 - **Rewards come from the room.** Once a fire holds 5 logs, each of its keepers may take one ember, and the server makes sure it's only one.
 - **Reads are open.** Anyone can read the world without an account, which is how the website shows the fires live.
 - **Your identity is a Beacon account.** It works on every Beacon server, and your profile name shows up in other Beacon games.

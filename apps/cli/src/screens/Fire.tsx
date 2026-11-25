@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { serverHost } from "@beaconsgg/client-sdk";
-import { accessLabel, ago, clock, lastSeenText, serverLabel, distanceKm, FIRE_TUNING, formatDistance, formatDuration, safeText, type Units } from "@watchfire/core";
+import { accessLabel, ago, capacityOf, clock, lastSeenText, serverLabel, distanceKm, FIRE_TUNING, formatDistance, formatDuration, safeText, type Units } from "@watchfire/core";
 import type { Game } from "../game.ts";
 import type { Session } from "../session.ts";
 import { strengthFor } from "@watchfire/core/flame";
@@ -47,7 +47,7 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
   const burning = f.phase === "burning";
   const isKeeper = !!me && f.keepers.includes(me);
   const hasEmber = !!me && f.emberHolders.includes(me);
-  const full = f.logs >= FIRE_TUNING.capacity;
+  const full = f.logs >= capacityOf(f);
   // A guest, or a fire on a server the player only watches, can't make any move here.
   // A guest, or a fire on a server the player can't act on (watching, not a member, down).
   const reason = game.readOnlyReason(fireId);
@@ -120,7 +120,7 @@ export function Fire(props: { game: Game; session: Session; fireId: string; back
         )}
       </Text>
       <Text color="#a8a29e">
-        {f.logs}/{FIRE_TUNING.capacity} logs{full && burning ? " (full)" : ""} · lit by{" "}
+        {f.logs}/{capacityOf(f)} logs{full && burning ? " (full)" : ""} · lit by{" "}
         <Text color="#fde68a">{f.lighter === me ? "you" : game.nameOf(f.lighter)}</Text> {ago(f.placedAt)} ·{" "}
         {f.warmth} warmed their hands
       </Text>

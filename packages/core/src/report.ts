@@ -30,6 +30,8 @@ export interface ReportFire {
   lat: number;
   lng: number;
   logs: number;
+  /** Most logs it holds. */
+  capacity: number;
   phase: "burning" | "ash";
   placedAt: number;
   outAt: number;

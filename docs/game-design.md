@@ -39,7 +39,7 @@ We first considered a web game and decided against it:
 | --- | --- | --- |
 | A new fire burns on its own for | 12 hours | server |
 | Each log pushes "out" back by | 4 hours | server |
-| Most logs a fire holds | 12, so a fire lives at most 60 hours | server |
+| Most logs a fire holds | 180, so a fire lives at most 30½ days | server |
 | Lighting a fire lays the kindling, its first log | 1 log | client (the kindling is a normal contribute) |
 | Only logs go on a fire | items of class `log` | server |
 | A log counts as one, whatever it claims to weigh | `count`, not `sum` | server |
@@ -52,7 +52,7 @@ We first considered a web game and decided against it:
 
 Lighting a fire costs a log, so "light a new one" and "feed one" draw from the same three.
 
-Because the out time is `placedAt + 12h + logs × 4h`, a log counts the same whenever you add it. A fire that runs out of logs before its deadline catches up simply goes dark. Every fire dies within 60 hours, so the world turns over and someone always has to relight.
+Because the out time is `placedAt + 12h + logs × 4h`, a log counts the same whenever you add it. A fire that runs out of logs before its deadline catches up simply goes dark. Every fire dies within 30½ days, so even the best-loved fire is relit in the end.
 
 ### Tuned for a small group
 
@@ -61,16 +61,16 @@ The starting numbers assume a handful to a few dozen players:
 | Keepers on a fire | What happens |
 | --- | --- |
 | 1 | Lighting plus 2 logs = 24h, so the fire reaches tomorrow. Alone they add 12h a day against a 24h day, so the fire dies around hour 36. Ember on day 2. |
-| 2 | 6 logs a day = 24h a day: they keep pace with the clock and can run the fire to its 60h cap. Ember on day 1. |
-| 3+ | The fire fills to 12 logs on day 1 or 2 and burns out at hour 60. More keepers mean more embers, not a longer fire. |
+| 2 | 6 logs a day = 24h a day: they keep pace with the clock, and the fire lasts as long as they do. Ember on day 1. |
+| 3+ | 9 logs a day = 36h a day, so the fire banks 12h for every day they keep it. Three keepers fill it to 180 logs in 20 days, and it burns out at day 30½. |
 
-So one player can always keep something going, and it takes two to make a fire last. With more players we can shorten `secPerLog` and raise `capacity`.
+So one player can always keep something going, it takes two to keep a fire alive, and three or more can keep it going for weeks. Playtesting raised `capacity` from 12 (a 60-hour life) to 180, so a well-kept fire can last.
 
-The numbers live in `FIRE_TUNING` (`packages/core/src/tuning.ts`). They're frozen into each fire when it's lit, so retuning affects only new fires.
+The numbers live in `FIRE_TUNING` (`packages/core/src/tuning.ts`). They're frozen into each fire when it's lit, so retuning affects only new fires: fires lit before the change still hold 12 logs, and the game reads each fire's own capacity from its policy.
 
 ### Why three logs a day is client-only
 
-Beacon rooms can't count per-player actions across rooms or days. A modified client could add more logs, but each fire's capacity caps the damage at "this fire burns its full 60 hours." We accept that.
+Beacon rooms can't count per-player actions across rooms or days. A modified client could add more logs, but each fire's capacity caps the damage at "this fire burns its full 30½ days." We accept that.
 
 ## Where you are
 

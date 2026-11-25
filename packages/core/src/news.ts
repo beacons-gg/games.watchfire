@@ -12,6 +12,8 @@ export interface FireSnap {
   outAt: number;
   keepers: number;
   lighter?: string;
+  /** Most logs it holds (missing in snapshots saved by older versions). */
+  capacity?: number;
 }
 
 export interface Snapshot {
@@ -49,6 +51,7 @@ export function snapshotOf(fires: FireView[], at = nowSec()): Snapshot {
       placedAt: f.placedAt,
       outAt: f.outAt,
       keepers: f.keepers.length,
+      ...(f.capacity ? { capacity: f.capacity } : {}),
       ...(f.lighter ? { lighter: f.lighter } : {}),
     };
   }
@@ -86,7 +89,8 @@ export function newsBetween(
     const oldLogs = before?.logs ?? (f.placedAt >= since ? 1 : f.logs);
     if (f.logs > oldLogs) {
       const n = f.logs - oldLogs;
-      if (oldLogs < opts.capacity && f.logs >= opts.capacity) {
+      const capacity = f.capacity ?? opts.capacity;
+      if (oldLogs < capacity && f.logs >= capacity) {
         lines.push({ at: cur.at, fireId: id, kind: "milestone", text: `${name} is full: ${f.logs} logs, burning until it's spent.` });
       } else if (oldLogs < opts.emberAt && f.logs >= opts.emberAt) {
         lines.push({ at: cur.at, fireId: id, kind: "milestone", text: `${name} reached ${opts.emberAt} logs. Its keepers may take embers.` });

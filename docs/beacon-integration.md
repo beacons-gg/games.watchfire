@@ -80,6 +80,7 @@ Anything only the client enforces is cheatable by a modified client. The design 
 - **`summary.phase` in discovery lags.** It's the stored phase, updated only by the next op. Judge burning versus ash by the clock against `state.outAt` (`readFire` does).
 - **A dark room closes the moment nobody is owed a grant.** With `onEmpty: "close"`, a room in its last phase closes once every contributor has claimed, *or* as soon as nobody is owed anything from a grant pool; only otherwise does it wait out `claimTtl`. With embers as the only grant, a fire that never reached `emberAt` logs, or whose keepers had all taken their embers, closed the instant it went dark, and raking answered `expired`. The fix is a grant on `claim` itself (a cinder each): every keeper who hasn't raked is owed one, so the ashes stay until the last keeper rakes or `claimTtl` passes. Fires lit before the change still close early.
 - **Discovery summaries carry no name or out time.** They hold only `count`, `capacity` and `phase`, so listing fires costs one `resolveRoom` per fire. That's fine at hundreds of fires (600 reads a minute per address) and calls for an indexer beyond that.
+- **A big capacity makes lighting heavy.** A fire is placed with one ember and one cinder per possible keeper, each signed. At 180 that's 360 items, about 100 KB, and lighting takes about 4 seconds on `9q72` (half a second at 12). Reading a fire costs the same either way.
 - **Discovery accepts precision-1 cells.** The 32 cells `0…z` cover the world in one read (`WORLD_CELLS`). The live map channel needs precision-5 cells, at most 256 per socket, so a world view follows individual rooms (`subscribeRoom`, 256 per socket) instead.
 - **Live deltas start after the subscription connects.** The spike missed the first ops. Always take a baseline with `resolveRoom` after subscribing and fold deltas on top, as Beacon's live-updates guide says.
 - **Item `match` is unsigned.** Only `birth` is signed. Never trust another player's `match` for anything the server doesn't already enforce.
@@ -93,7 +94,7 @@ A fire's policy opens one op to every game: `react`, as `games: ["*"]`. Players 
 - **While it burns.** The server takes a reaction on ash too, but Watchfire offers warming hands only while a fire burns ("There's no warmth left in these ashes."). Other games should do the same.
 - **What Watchfire counts:** warmth is the number of accounts with a `warm` reaction on the fire, whatever they aimed it at, so warming a fire at several logs still counts once. A reaction doesn't record its game, so another game's players count the same as Watchfire's.
 - **Where.** The server must admit the other game's writes (`BEACON_GAMES`, or no `game:` markers) and take `games` in policies (`policy:ops.games` in its descriptor). `9q72` takes `games` but admits only `watchfire-door` for now.
-- **Old fires:** a policy is signed when the fire is lit, so fires lit before this opened up stay Watchfire-only until they burn out (60 hours at most).
+- **Old fires:** a policy is signed when the fire is lit, so fires lit before this opened up stay Watchfire-only until they burn out.
 
 `pnpm spike` checks it against any server that admits other games: another game's player warms their hands, and their log and ember are refused `gameNotAccepted`.
 
